@@ -2,6 +2,8 @@
 
 This BLAS implementation for D is currently based on the GNU Scientific Library BLAS module. The library is currently in the first phase - code conversion for GSL. Documentation of the function is largely taken from the [MKL manual](https://software.intel.com/en-us/articles/mkl-reference-manual). Once the code conversion is completed efforts will be made to  optimise performance.
 
+The approach taken in writing the code is to use D's metaprogramming features as much as possible to reduce code complexity.
+
 ```
 #!/usr/bin/env dub
 /+ dub.json:
