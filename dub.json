@@ -1,0 +1,12 @@
+{
+	"name": "dblas",
+	"description": "BLAS implementation for D",
+	"targetType": "executable",
+	"homepage": "http://www.active-analytics.com",
+	"copyright": "Copyright © 2016, Chibisi Chima-Okereke",
+	"libs": ["openblas", "pthread", "m"],
+	"authors": [
+		"Chibisi Chima-Okereke"
+	],
+	"license": "BSL-1.0"
+}
