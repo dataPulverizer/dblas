@@ -89,6 +89,14 @@ T csgn(X: Complex!T, T = typeof(X.re))(X x)
 		return sgn(x.im);
 }
 
+T min(T)(T a, T b){
+	return a > b ? a : b;
+}
+T max(T)(T a, T b){
+	return a < b ? a : b;
+}
+
+
 /** TODO:
 *   1. Unit tests and better examples. extern(C) equivalent functions from the blas library 
 *      and make sure that the outputs are the same :-)

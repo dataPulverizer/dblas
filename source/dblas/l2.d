@@ -2621,8 +2621,6 @@ void syr(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo, in N n, in X alpha, in
     }
 }
 
-
-
 /** 
 *  @title syr2 blas function: Performs a rank-2 update of symmetric matrix.
 *
@@ -2733,7 +2731,121 @@ void syr2(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo, in N n, in X alpha, i
     }
 }
 
-
+/** 
+*  @title tbmv blas function: Computes a matrix-vector product using a triangular band matrix.
+*
+*  @description      The ?bmv routines perform one of the matrix-vector operations defined as
+*                    x := A*x , or x := A'*x , or x := conjg(A')*x, where
+*
+*                    x is an n-element vector,
+*                    A is an n-by-n unit, or non-unit, upper or lower triangular band matrix, with (k +1) diagonals.
+*
+*  Input Parameters:
+*
+*  @param layout:    Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:      Specifies whether the matrix A is an upper or lower triangular matrix:
+*                    uplo = CblasUpper
+*                    if uplo = CblasLower, then the matrix is low triangular.
+*
+*  @param trans:      Specifies the operation:
+*                    if trans = CblasNoTrans , then x := A*x ;
+*                    if trans = CblasTrans , then x := A'*x ;
+*                    if trans = CblasConjTrans , then x := conjg(A')*x
+*
+*  @param diag:      Specifies whether the matrix A is unit triangular:
+*                    if diag = CblasUnit then the matrix is unit triangular;
+*                    if diag = CblasNonUnit, then the matrix is not unit triangular.
+*
+*  @param n:         Specifies the order of the matrix A. The value of n must be at least zero.
+*
+*  @param k:         On entry with uplo = CblasUpper specifies the number of super-diagonals
+*                    of the matrix A. On entry with uplo = CblasLower , k specifies the number
+*                    of sub-diagonals of the matrix a.
+*                    The value of k must satisfy 0 ≤k.
+*
+*  @param a:         Array, size lda*n .
+*                    Layout = CblasColMajor :
+*
+*                    Before entry with uplo = CblasUpper , the leading (k + 1) by n part of
+*                    the array a must contain the upper triangular band part of the matrix of
+*                    coefficients, supplied column-by-column, with the leading diagonal of the
+*                    matrix in row k of the array, the first super-diagonal starting at position 1 in
+*                    row (k - 1) , and so on. The top left k by k triangle of the array a is not
+*                    referenced. The following program segment transfers an upper triangular
+*                    band matrix from conventional full matrix storage (matrix, with leading
+*                    dimension ldm) to band storage (a, with leading dimension lda):
+*                    for (j = 0; j < n; j++) {
+*                        m = k - j;
+*                        for (i = max( 0, j - k); i <= j; i++) {
+*                            a[(m+i) + j*lda] = matrix[i + j*ldm];
+*                        }
+*                    }
+*                    Before entry with uplo = CblasLower , the leading (k + 1) by n part of
+*                    the array a must contain the lower triangular band part of the matrix of
+*                    coefficients, supplied column-by-column, with the leading diagonal of the
+*                    matrix in row 0 of the array, the first sub-diagonal starting at position 0 in
+*                    row 1, and so on. The bottom right k by k triangle of the array a is not
+*                    referenced. The following program segment transfers a lower triangular
+*                    band matrix from conventional full matrix storage (matrix, with leading
+*                    dimension ldm) to band storage (a, with leading dimension lda):
+*                    for (j = 0; j < n; j++) {
+*                        m = -j;
+*                        for (i = j; i < min(n, j + k + 1); i++) {
+*                            a[(m+i) + j*lda] = matrix[i + j*ldm];
+*                        }
+*                    }
+*                    Note that when diag = CblasUnit , the elements of the array a
+*                    corresponding to the diagonal elements of the matrix are not referenced,
+*                    but are assumed to be unity.
+*                    Layout = CblasRowMajor:
+*                    Before entry with uplo = CblasUpper , the leading ( k + 1)-by- n part of
+*                    array a must contain the upper triangular band part of the matrix of
+*                    coefficients. The matrix must be supplied row-by-row, with the leading
+*                    diagonal of the matrix in column 0 of the array, the first super-diagonal
+*                    starting at position 0 in column 1, and so on. The bottom right k -by- k
+*                    triangle of array a is not referenced.
+*                    The following program segment transfers the upper triangular part of a
+*                    Hermitian band matrix from row-major full matrix storage (matrix with
+*                    leading dimension ldm ) to row-major band storage ( a , with leading
+*                    dimension lda ):
+*                    for (i = 0; i < n; i++) {
+*                        m = -i;
+*                        for (j = i; j < MIN(n, i+k+1); j++) {
+*                            a[(m+j) + i*lda] = matrix[j + i*ldm];
+*                        }
+*                    }
+*                    Before entry with uplo = CblasLower , the leading ( k + 1)-by- n part of
+*                    array a must contain the lower triangular band part of the matrix of
+*                    coefficients, supplied row-by-row, with the leading diagonal of the matrix in
+*                    column k of the array, the first sub-diagonal starting at position 1 in column
+*                    k -1, and so on. The top left k -by- k triangle of array a is not referenced.
+*                    The following program segment transfers the lower triangular part of a
+*                    Hermitian row-major band matrix from row-major full matrix storage
+*                    (matrix, with leading dimension ldm ) to row-major band storage ( a , with
+*                    leading dimension lda ):
+*                    for (i = 0; i < n; i++) {
+*                        m = k - i;
+*                        for (j = max(0, i-k); j <= i; j++) {
+*                            a[(m+j) + i*lda] = matrix[j + i*ldm];
+*                        }
+*                    }
+*
+*  @param lda:       Specifies the leading dimension of a as declared in the calling
+*                    (sub)program. The value of lda must be at least (k + 1).
+*
+*  @param x:         Array, size at least (1 + (n - 1)*abs(incx)) . Before entry, the
+*                    incremented array x must contain the n-element vector x.
+*
+*  @param incx:      Specifies the increment for the elements of x.
+*                    The value of incx must not be zero.
+*
+*  Output Parameters:
+*
+*  @param x:         Overwritten with the transformed vector x.
+*
+*/
 void tbmv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
                 in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
                 in N n, in N k, in X* a, in N lda, X* x, in N incX)
@@ -2828,13 +2940,226 @@ void tbmv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
 }
 
 
-
-
-
-
-
-
-
-
+/** 
+*  @title tbsv blas function: Solves a system of linear equations whose coefficients are in a triangular band matrix.
+*
+*  @description      The ?tbsv routines solve one of the following systems of equations:
+*                    A*x = b, or A'*x = b, or conjg(A')*x = b, where
+*
+*                    b and x are n-element vectors,
+*                    A is an n-by-n unit, or non-unit, upper or lower triangular band matrix, with (k + 1) diagonals.
+*                    The routine does not test for singularity or near-singularity.
+*                    Such tests must be performed before calling this routine.
+*
+*  Input Parameters:
+*
+*  @param layout:    Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:      Specifies whether the matrix A is an upper or lower triangular matrix:
+*                    if uplo = CblasUpper the matrix is upper triangular;
+*                    if uplo = CblasLower , the matrix is low triangular.
+*
+*  @param trans:     Specifies the system of equations:
+*                    if trans = CblasNoTrans , then A*x = b ;
+*                    if trans = CblasTrans , then A'*x = b ;
+*                    if trans = CblasConjTrans , then conjg(A')*x = b.
+*
+*  @param diag:      Specifies whether the matrix A is unit triangular:
+*                    if diag = CblasUnit then the matrix is unit triangular;
+*                    if diag = CblasNonUnit , then the matrix is not unit triangular.
+*
+*  @param n          Specifies the order of the matrix A. The value of n must be at least zero.
+*
+*  @param k          On entry with uplo = CblasUpper , k specifies the number of super-
+*                    diagonals of the matrix A. On entry with uplo = CblasLower , k specifies
+*                    the number of sub-diagonals of the matrix A.
+*                    The value of k must satisfy 0 ≤k.
+*                    Array, size lda*n .
+*
+*  @param a:         Layout = CblasColMajor :
+*                    Before entry with uplo = CblasUpper , the leading (k + 1) by n part of
+*                    the array a must contain the upper triangular band part of the matrix of
+*                    coefficients, supplied column-by-column, with the leading diagonal of the
+*                    matrix in row k of the array, the first super-diagonal starting at position 1 in
+*                    row (k - 1) , and so on. The top left k by k triangle of the array a is not
+*                    referenced.
+*                    The following program segment transfers an upper triangular band matrix
+*                    from conventional full matrix storage (matrix, with leading dimension ldm)
+*                    to band storage (a, with leading dimension lda):
+*                    for (j = 0; j < n; j++) {
+*                        m = k - j;
+*                        for (i = max( 0, j - k); i <= j; i++) {
+*                            a[(m+i) + j*lda] = matrix[i + j*ldm];
+*                        }
+*                    }
+*                    Before entry with uplo = CblasLower , the leading (k + 1) by n part of
+*                    the array a must contain the lower triangular band part of the matrix of
+*                    coefficients, supplied column-by-column, with the leading diagonal of the
+*                    matrix in row 0 of the array, the first sub-diagonal starting at position 0 in
+*                    row 1, and so on. The bottom right k by k triangle of the array a is not
+*                    referenced.
+*                    The following program segment transfers a lower triangular band matrix
+*                    from conventional full matrix storage (matrix, with leading dimension ldm)
+*                    to band storage (a, with leading dimension lda):
+*                    for (j = 0; j < n; j++) {
+*                        m = -j;
+*                        for (i = j; i < min(n, j + k + 1); i++) {
+*                            a[(m+i) + j*lda] = matrix[i + j*ldm];
+*                        }
+*                    }
+*                    When diag = CblasUnit , the elements of the array a corresponding to the
+*                    diagonal elements of the matrix are not referenced, but are assumed to be
+*                    unity.
+*                    Layout = CblasRowMajor:
+*                    Before entry with uplo = CblasUpper , the leading ( k + 1)-by- n part of
+*                    array a must contain the upper triangular band part of the matrix of
+*                    coefficients. The matrix must be supplied row-by-row, with the leading
+*                    diagonal of the matrix in column 0 of the array, the first super-diagonal
+*                    starting at position 0 in column 1, and so on. The bottom right k -by- k
+*                    triangle of array a is not referenced.
+*                    The following program segment transfers the upper triangular part of a
+*                    Hermitian band matrix from row-major full matrix storage (matrix with
+*                    leading dimension ldm ) to row-major band storage ( a , with leading
+*                    dimension lda ):
+*                    for (i = 0; i < n; i++) {
+*                        m = -i;
+*                        for (j = i; j < MIN(n, i+k+1); j++) {
+*                            a[(m+j) + i*lda] = matrix[j + i*ldm];
+*                        }
+*                    }
+*                    Before entry with uplo = CblasLower , the leading ( k + 1)-by- n part of
+*                    array a must contain the lower triangular band part of the matrix of
+*                    coefficients, supplied row-by-row, with the leading diagonal of the matrix in
+*                    column k of the array, the first sub-diagonal starting at position 1 in column
+*                    k -1, and so on. The top left k -by- k triangle of array a is not referenced.
+*                    The following program segment transfers the lower triangular part of a
+*                    Hermitian row-major band matrix from row-major full matrix storage
+*                    (matrix, with leading dimension ldm ) to row-major band storage ( a , with
+*                    leading dimension lda ):
+*                    for (i = 0; i < n; i++) {
+*                        m = k - i;
+*                        for (j = max(0, i-k); j <= i; j++) {
+*                            a[(m+j) + i*lda] = matrix[j + i*ldm];
+*                        }
+*                    }
+*
+*  @param lda:       Specifies the leading dimension of a as declared in the calling
+*                    (sub)program. The value of lda must be at least (k + 1).
+*
+*  @param x:         Array, size at least (1 + (n - 1)*abs(incx)) . Before entry, the
+*                    incremented array x must contain the n-element right-hand side vector b.
+*
+*  @param incx:      Specifies the increment for the elements of x.
+*                    The value of incx must not be zero.
+*
+*  Output Parameters:
+*
+*  @param x:         Overwritten with the solution vector x.
+*
+*/
+void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
+          in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
+          in N n, in N k, in X* a, in N lda,
+          X* x, in N incX)
+{
+    const N nonunit = (diag == CblasNonUnit);
+    N i, j;
+    const N trans = (transA != CblasConjTrans) ? transA : CblasTrans;
+    
+    if (n == 0)
+        return;
+    
+    /* form  x := inv( A )*x */
+    
+    if ((layout == CblasRowMajor && trans == CblasNoTrans && uplo == CblasUpper)
+        || (layout == CblasColMajor && trans == CblasTrans && uplo == CblasLower)) {
+        /* backsubstitution */
+        N ix = OFFSET(n, incX) + incX * (n - 1);
+        for (i = n; i > 0 && i--;) {
+            X tmp = x[ix];
+            const N j_min = i + 1;
+            const N j_max = min(n, i + k + 1);
+            N jx = OFFSET(n, incX) + j_min * incX;
+            for (j = j_min; j < j_max; j++) {
+                const X Aij = a[lda * i + (j - i)];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+                x[ix] = tmp / a[lda * i + 0];
+            } else {
+                x[ix] = tmp;
+            }
+          ix -= incX;
+        }
+    } else if ((layout == CblasRowMajor && trans == CblasNoTrans && uplo == CblasLower)
+               || (layout == CblasColMajor && trans == CblasTrans && uplo == CblasUpper)) {
+        /* forward substitution */
+        N ix = OFFSET(n, incX);
+        for (i = 0; i < n; i++) {
+            X tmp = x[ix];
+            const N j_min = (i > k ? i - k : 0);
+            const N j_max = i;
+            N jx = OFFSET(n, incX) + j_min * incX;
+            for (j = j_min; j < j_max; j++) {
+                const X Aij = a[lda * i + (k + j - i)];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+                x[ix] = tmp / a[lda * i + k];
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((layout == CblasRowMajor && trans == CblasTrans && uplo == CblasUpper)
+               || (layout == CblasColMajor && trans == CblasNoTrans && uplo == CblasLower)) {
+        /* form  x := inv( A' )*x */
+        /* forward substitution */
+        N ix = OFFSET(n, incX);
+        for (i = 0; i < n; i++) {
+            X tmp = x[ix];
+            const N j_min = (k > i ? 0 : i - k);
+            const N j_max = i;
+            N jx = OFFSET(n, incX) + j_min * incX;
+            for (j = j_min; j < j_max; j++) {
+                const X Aji = a[(i - j) + lda * j];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+                x[ix] = tmp / a[0 + lda * i];
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((layout == CblasRowMajor && trans == CblasTrans && uplo == CblasLower)
+               || (layout == CblasColMajor && trans == CblasNoTrans && uplo == CblasUpper)) {
+        /* backsubstitution */
+        N ix = OFFSET(n, incX) + (n - 1) * incX;
+        for (i = n; i > 0 && i--;) {
+            X tmp = x[ix];
+            const N j_min = i + 1;
+            const N j_max = min(n, i + k + 1);
+            N jx = OFFSET(n, incX) + j_min * incX;
+            for (j = j_min; j < j_max; j++) {
+                const X Aji = a[(k + i - j) + lda * j];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+                x[ix] = tmp / a[k + lda * i];
+            } else {
+                x[ix] = tmp;
+            }
+            ix -= incX;
+        }
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
 
 
