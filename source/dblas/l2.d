@@ -11,6 +11,7 @@ module dblas.l2;
 import std.stdio : writeln;
 
 import dblas.l1;
+import std.math: abs, fabs, sqrt;
 import std.complex: Complex, complex, conj;
 import std.algorithm.comparison : min, max;
 import std.traits : isFloatingPoint;
@@ -123,6 +124,29 @@ T TPLO(T)(T N, T i, T j){
 	return (i*(i + 1))/2 + j;
 }
 
+
+T xhypot(T)(in T x, in T y)
+{
+    T xabs = fabs(x);
+    T yabs = fabs(y);
+    T xmin, xmax;
+    
+    if(xabs < yabs){
+        xmin = xabs;
+        xmax = yabs;
+    } else {
+        xmin = yabs;
+        xmax = xabs;
+    }
+    
+    if(xmin == 0) 
+    {
+        return xmax;
+    }
+    
+    T u = xmin/xmax;
+    return xmax*sqrt(1 + u*u);
+}
 
 /**
 *  @title gbmv blas function: Computes a matrix-vector product using a general band
@@ -3058,14 +3082,13 @@ void tbmv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
 *  @param x:         Overwritten with the solution vector x.
 *
 */
-void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
-          in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
-          in N n, in N k, in X* a, in N lda,
-          X* x, in N incX)
+void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
+                in N n, in N k, in X* a, in N lda, X* x, in N incX)
 {
+    const N layoutIndicator = (transA == CblasConjTrans) ? -1 : 1;
+    const N trans = (transA != CblasConjTrans) ? transA : CblasTrans;
     const N nonunit = (diag == CblasNonUnit);
     N i, j;
-    const N trans = (transA != CblasConjTrans) ? transA : CblasTrans;
     
     if (n == 0)
         return;
@@ -3082,12 +3105,23 @@ void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
             const N j_max = min(n, i + k + 1);
             N jx = OFFSET(n, incX) + j_min * incX;
             for (j = j_min; j < j_max; j++) {
-                const X Aij = a[lda * i + (j - i)];
+            	static if(!isComplex!X)
+            	{
+            		const X Aij = a[lda * i + (j - i)];
+            	}else{
+            		const X Aij = X(a[lda * i + (j - i)].re, layoutIndicator*a[lda * i + (j - i)].im);
+            	}
                 tmp -= Aij * x[jx];
                 jx += incX;
             }
             if (nonunit) {
-                x[ix] = tmp / a[lda * i + 0];
+            	static if(!isComplex!X)
+            	{
+            		X aij = a[lda * i + 0];
+            	}else{
+            		X aij = X(a[lda * i + 0].re, layoutIndicator*a[lda * i + 0].im);
+            	}
+                x[ix] = tmp / aij;
             } else {
                 x[ix] = tmp;
             }
@@ -3103,12 +3137,23 @@ void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
             const N j_max = i;
             N jx = OFFSET(n, incX) + j_min * incX;
             for (j = j_min; j < j_max; j++) {
-                const X Aij = a[lda * i + (k + j - i)];
+                static if(!isComplex!X)
+            	{
+            		const X Aij = a[lda * i + (k + j - i)];
+            	}else{
+            		const X Aij = X(a[lda * i + (k + j - i)].re, layoutIndicator*a[lda * i + (k + j - i)].im);
+            	}
                 tmp -= Aij * x[jx];
                 jx += incX;
             }
             if (nonunit) {
-                x[ix] = tmp / a[lda * i + k];
+            	static if(!isComplex!X)
+            	{
+            		X aij = a[lda * i + k];
+            	}else{
+            		X aij = X(a[lda * i + k].re, layoutIndicator*a[lda * i + k].im);
+            	}
+                x[ix] = tmp / aij;
             } else {
                 x[ix] = tmp;
             }
@@ -3125,12 +3170,23 @@ void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
             const N j_max = i;
             N jx = OFFSET(n, incX) + j_min * incX;
             for (j = j_min; j < j_max; j++) {
-                const X Aji = a[(i - j) + lda * j];
+                static if(!isComplex!X)
+            	{
+            		const X Aji = a[(i - j) + lda * j];
+            	}else{
+            		const X Aji = X(a[(i - j) + lda * j].re, layoutIndicator*a[(i - j) + lda * j].im);
+            	}
                 tmp -= Aji * x[jx];
                 jx += incX;
             }
             if (nonunit) {
-                x[ix] = tmp / a[0 + lda * i];
+            	static if(!isComplex!X)
+            	{
+            		const X aij = a[lda * i];
+            	}else{
+            		const X aij = X(a[lda*i].re, layoutIndicator*a[lda*i].im);
+            	}
+                x[ix] = tmp / aij;
             } else {
                 x[ix] = tmp;
             }
@@ -3146,12 +3202,23 @@ void tbsv(N, X)(in CBLAS_ORDER layout, in CBLAS_UPLO uplo,
             const N j_max = min(n, i + k + 1);
             N jx = OFFSET(n, incX) + j_min * incX;
             for (j = j_min; j < j_max; j++) {
-                const X Aji = a[(k + i - j) + lda * j];
+                static if(!isComplex!X)
+            	{
+            		const X Aji = a[(k+i-j)+lda*j];
+            	}else{
+            		const X Aji = X(a[(k+i-j)+lda*j].re, layoutIndicator*a[(k+i-j)+lda*j].im);
+            	}
                 tmp -= Aji * x[jx];
                 jx += incX;
             }
             if (nonunit) {
-                x[ix] = tmp / a[k + lda * i];
+            	static if(!isComplex!X)
+            	{
+            		const X aij = a[k+lda*i];
+            	}else{
+            		const X aij = X(a[k+lda*i].re, layoutIndicator*a[k+lda*i].im);
+            	}
+                x[ix] = tmp/aij;
             } else {
                 x[ix] = tmp;
             }
