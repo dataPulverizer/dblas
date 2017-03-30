@@ -3382,3 +3382,225 @@ void tpmv(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE tra
 }
 
 
+/** 
+*  @title cblas_tpsv Solves a system of linear equations whose coefficients are in a triangular packed matrix.
+*
+*  @description      The tpsv routines solve one of the following systems of equations
+*                    A*x = b , or A'*x = b , or conjg(A')*x = b, where
+*
+*                    b and x are n-element vectors,
+*                    A is an n-by-n unit, or non-unit, upper or lower triangular matrix, supplied in packed form.
+*                    This routine does not test for singularity or near-singularity.
+*                    Such tests must be performed before calling this routine.
+*
+*  Input Parameters:
+*
+*  @param layout:    Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:      Specifies whether the matrix A is upper or lower triangular:
+*                    uplo = CblasUpper
+*                    if uplo = CblasLower , then the matrix is low triangular.
+*
+*  @param trans:     Specifies the system of equations:
+*                    if trans = CblasNoTrans , then A*x = b ;
+*                    if trans = CblasTrans , then A'*x = b ;
+*                    if trans = CblasConjTrans , then conjg(A')*x = b .
+*
+*  @param diag:      Specifies whether the matrix A is unit triangular:
+*                    if diag = CblasUnit then the matrix is unit triangular;
+*                    if diag = CblasNonUnit , then the matrix is not unit triangular.
+*
+*  @param n:         Specifies the order of the matrix A. The value of n must be at least zero.
+*
+*  @param ap:        Array, size at least ((n*(n + 1))/2) .
+*                    For Layout = CblasColMajor :
+*                    Before entry with uplo = CblasUpper , the array ap must contain the upper
+*                    triangular part of the triangular matrix packed sequentially, column-by-
+*                    column, so that ap[0] contains A 1, 1 , ap[1] and ap[2] contain A 1, 2 and
+*                    A 2, 2 respectively, and so on.
+*                    Before entry with uplo = CblasLower , the array ap must contain the lower
+*                    triangular part of the triangular matrix packed sequentially, column-by-
+*                    column, so that ap[0] contains A 1, 1 , ap[1] and ap[2] contain A 2, 1 and
+*                    A 3, 1 respectively, and so on.
+*                    For Layout = CblasRowMajor :
+*                    Before entry with uplo = CblasUpper , the array ap must contain the upper
+*                    triangular part of the triangular matrix packed sequentially, row-by-row,
+*                    ap[0] contains A 1, 1 , ap[1] and ap[2] contain A 1, 2 and A 1, 3 respectively,
+*                    and so on. Before entry with uplo = CblasLower , the array ap must
+*                    contain the lower triangular part of the triangular matrix packed
+*                    sequentially, row-by-row, so that ap[0] contains A 1, 1 , ap[1] and ap[2]
+*                    contain A 2, 1 and A 2, 2 respectively, and so on.
+*                    When diag = CblasUnit , the diagonal elements of a are not referenced,
+*                    but are assumed to be unity.
+*
+*  @param x:         Array, size at least (1 + (n - 1)*abs(incx)) . Before entry, the
+*                    incremented array x must contain the n-element right-hand side vector b.
+*
+*  @param incx:      Specifies the increment for the elements of x.
+*                    The value of incx must not be zero.
+*
+*  Output Parameters
+*
+*  @param x:         Overwritten with the solution vector x.
+*
+*/
+void tpsv(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo,
+                in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
+                in N n, in X* ap, X* x, in N incX)
+{
+    N i, j;
+    
+    const N layoutIndicator = (transA == CblasConjTrans) ? -1 : 1;
+    const N nonunit = (diag == CblasNonUnit);
+    const N trans = (transA != CblasConjTrans) ? transA : CblasTrans;
+    
+    if (n == 0)
+        return;
+    
+    /* form  x := inv( A )*x */
+    
+    if ((order == CblasRowMajor && trans == CblasNoTrans && uplo == CblasUpper)
+        || (order == CblasColMajor && trans == CblasTrans && uplo == CblasLower)) {
+        /* backsubstitution */
+        N ix = OFFSET(n, incX) + incX * (n - 1);
+        if (nonunit) {
+        	X atmp = ap[TPUP(n, (n - 1), (n - 1))];
+        	static if(isComplex!X)
+        	    atmp.im = layoutIndicator*atmp.im;
+            x[ix] = x[ix] / atmp;
+        }
+        ix -= incX;
+        for (i = n - 1; i > 0 && i--;) {
+            X tmp = x[ix];
+            N jx = ix + incX;
+            for (j = i + 1; j < n; j++) {
+            	static if(isComplex!X)
+            	    const X Aij = X(ap[TPUP(n, i, j)].re, layoutIndicator*ap[TPUP(n, i, j)].im);
+            	else
+            	    const X Aij = ap[TPUP(n, i, j)];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	X atmp = ap[TPUP(n, i, i)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+                x[ix] = tmp/atmp;
+            } else {
+                x[ix] = tmp;
+            }
+            ix -= incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasNoTrans && uplo == CblasLower)
+               || (order == CblasColMajor && trans == CblasTrans && uplo == CblasUpper)) {
+    
+        /* forward substitution */
+        N ix = OFFSET(n, incX);
+        if (nonunit) {
+        	X atmp = ap[TPLO(n, 0, 0)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+            x[ix] = x[ix]/atmp;
+        }
+        ix += incX;
+        for (i = 1; i < n; i++) {
+            X tmp = x[ix];
+            N jx = OFFSET(n, incX);
+            for (j = 0; j < i; j++) {
+            	static if(isComplex!X)
+            	    const X Aij = X(ap[TPUP(n, i, j)].re, layoutIndicator*ap[TPUP(n, i, j)].im);
+            	else
+            	    const X Aij = ap[TPUP(n, i, j)];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	X atmp = ap[TPLO(n, i, j)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+                x[ix] = tmp/atmp;
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasTrans && uplo == CblasUpper)
+               || (order == CblasColMajor && trans == CblasNoTrans && uplo == CblasLower)) {
+    
+        /* form  x := inv( A' )*x */
+        
+        /* forward substitution */
+        N ix = OFFSET(n, incX);
+        if (nonunit) {
+        	X atmp = ap[TPLO(n, 0, 0)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+            x[ix] = x[ix]/atmp;
+        }
+        ix += incX;
+        for (i = 1; i < n; i++) {
+            X tmp = x[ix];
+            N jx = OFFSET(n, incX);
+            for (j = 0; j < i; j++) {
+            	static if(isComplex!X)
+            	    const X Aji = X(ap[TPUP(n, j, i)].re, layoutIndicator*ap[TPUP(n, j, i)].im);
+            	else
+            	    const X Aji = ap[TPUP(n, j, i)];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	X atmp = ap[TPLO(n, i, i)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+                x[ix] = tmp/atmp;
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasTrans && uplo == CblasLower)
+               || (order == CblasColMajor && trans == CblasNoTrans && uplo == CblasUpper)) {
+    
+        /* backsubstitution */
+        N ix = OFFSET(n, incX) + (n - 1) * incX;
+        if (nonunit) {
+        	X atmp = ap[TPLO(n, (n - 1), (n - 1))];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+            x[ix] = x[ix]/atmp;
+        }
+        ix -= incX;
+        for (i = n - 1; i > 0 && i--;) {
+            X tmp = x[ix];
+            N jx = ix + incX;
+            for (j = i + 1; j < n; j++) {
+            	static if(isComplex!X)
+            	    const X Aji = X(ap[TPUP(n, j, i)].re, layoutIndicator*ap[TPUP(n, j, i)].im);
+            	else
+            	    const X Aji = ap[TPUP(n, j, i)];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	X atmp = ap[TPLO(n, i, i)];
+        	    static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+                x[ix] = tmp/atmp;
+            } else {
+                x[ix] = tmp;
+            }
+            ix -= incX;
+        }
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
+
+
+
+
+
+
+
