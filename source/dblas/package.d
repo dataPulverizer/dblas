@@ -19,9 +19,8 @@ import std.complex: Complex, complex;
 
 /* C function for tpmv */
 extern (C){
-    void cblas_dtpsv(in CBLAS_ORDER order, in CBLAS_UPLO uplo,
-             in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
-             in int N, in double *Ap, double *X, in int incX);
+    void cblas_dtrsv(in CBLAS_ORDER order, in CBLAS_UPLO Uplo, in CBLAS_TRANSPOSE TransA, in CBLAS_DIAG Diag,
+                     in int N, in double *A, in int lda, double *X, in int incX);
 }
 
 /* Testing for tpmv */
@@ -31,14 +30,14 @@ void main(){
     CBLAS_TRANSPOSE transA = CblasNoTrans;
     CBLAS_DIAG diag = CblasNonUnit;
 
-    double[] a = [-0.381, 0.53, 0.451];
-    double[] x = [0.144, 0.032];
-    tpsv(order, uplo, transA, diag, 2, a.ptr, x.ptr, -1);
-    writeln("tpsv: ", x);
+    double[] x = [0.348];
+    double[] a = [0.995];
+    trsv(order, uplo, transA, diag, 1, a.ptr, 1, x.ptr, -1);
+    writeln("trsv (double): ", x);
 
-    Complex!double[] ac = [complex(0.052, 0.875), complex(0.751, -0.912), complex(0.832, -0.153)];
-    Complex!double[] xc = [complex(0.344, -0.143), complex(-0.668, -0.945)];
-    tpsv(order, uplo, transA, diag, 2, ac.ptr, xc.ptr, -1);
-    writeln("tpsv: ", xc);
+    Complex!double[] xc = [complex(-0.627, 0.281)];
+    Complex!double[] ac = [complex(0.977, -0.955)];
+    trsv(order, uplo, transA, diag, 1, ac.ptr, 1, xc.ptr, -1);
+    writeln("trsv (complex): ", xc);
 }
 

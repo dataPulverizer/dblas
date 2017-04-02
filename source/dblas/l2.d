@@ -3599,7 +3599,220 @@ void tpsv(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo,
 }
 
 
-
+/** 
+*  @title trsv Solves a system of linear equations whose coefficients are in a triangular matrix.
+*
+*  @description      The trsv routines solve one of the systems of equations:
+*                    A*x = b , or A'*x = b , or conjg(A')*x = b, where
+*
+*                    b and x are n-element vectors,
+*                    A is an n-by-n unit, or non-unit, upper or lower triangular matrix.
+*                    The routine does not test for singularity or near-singularity.
+*                    Such tests must be performed before calling this routine.
+*
+*  Input Parameters:
+*
+*  @param layout:    Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:      Specifies whether the matrix A is upper or lower triangular:
+*                    uplo = CblasUpper
+*                    if uplo = CblasLower , then the matrix is low triangular.
+*
+*  @param trans:     Specifies the systems of equations:
+*                    if trans = CblasNoTrans , then A*x = b ;
+*                    if trans = CblasTrans , then A'*x = b ;
+*                    if trans = CblasConjTrans , then oconjg(A')*x = b .
+*
+*  @param diag:      Specifies whether the matrix A is unit triangular:
+*                    if diag = CblasUnit then the matrix is unit triangular;
+*                    if diag = CblasNonUnit , then the matrix is not unit triangular.
+*
+*  @param n:         Specifies the order of the matrix A. The value of n must be at least zero.
+*
+*  @param a:         Array, size lda*n . Before entry with uplo = CblasUpper , the leading n-
+*                    by-n upper triangular part of the array a must contain the upper triangular
+*                    matrix and the strictly lower triangular part of a is not referenced. Before
+*                    entry with uplo = CblasLower , the leading n-by-n lower triangular part of
+*                    the array a must contain the lower triangular matrix and the strictly upper
+*                    triangular part of a is not referenced.
+*
+*                    When diag = CblasUnit , the diagonal elements of a are not referenced
+*                    either, but are assumed to be unity.
+*
+*  @param lda:       Specifies the leading dimension of a as declared in the calling
+*                    (sub) program. The value of lda must be at least max(1, n) .
+*
+*  @param x:         Array, size at least (1 + (n - 1)*abs(incx)) . Before entry, the
+*                    incremented array x must contain the n-element right-hand side vector b.
+*
+*  @param incx:      Specifies the increment for the elements of x.
+*                    The value of incx must not be zero.
+*
+*  Output Parameters:
+*
+*  @param x:         Overwritten with the solution vector x.
+*
+*/
+void trsv(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo,
+                in CBLAS_TRANSPOSE transA, in CBLAS_DIAG diag,
+                in N n, in X* a, in N lda, X* x, in N incX)
+{
+	const N layoutIndicator = (transA == CblasConjTrans) ? -1 : 1;
+	const N trans = (transA != CblasConjTrans) ? transA : CblasTrans;
+    const N nonunit = (diag == CblasNonUnit);
+    N ix, jx;
+    N i, j;
+    
+    if (n == 0)
+        return;
+    
+    /* form  x := inv( A )*x */
+    
+    if ((order == CblasRowMajor && trans == CblasNoTrans && uplo == CblasUpper)
+        || (order == CblasColMajor && trans == CblasTrans && uplo == CblasLower)) {
+        /* backsubstitution */
+        ix = OFFSET(n, incX) + incX * (n - 1);
+        if (nonunit) {
+        	X atmp = a[lda * (n - 1) + (n - 1)];
+        	static if(isComplex!X)
+        	        atmp.im = layoutIndicator*atmp.im;
+            x[ix] = x[ix]/atmp;
+        }
+        ix -= incX;
+        for (i = n - 1; i > 0 && i--;) {
+            X tmp = x[ix];
+            jx = ix + incX;
+            for (j = i + 1; j < n; j++) {
+            	static if(isComplex!X)
+            	    const X Aij = X(a[lda*i + j].re, layoutIndicator*a[lda*i + j].im);
+            	else
+                    const X Aij = a[lda * i + j];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	static if(isComplex!X)
+            	    const X aij = X(a[lda*i + i].re, layoutIndicator*a[lda*i + i].im);
+            	else
+                    const X aij = a[lda*i + i];
+                x[ix] = tmp/aij;
+            } else {
+                x[ix] = tmp;
+            }
+            ix -= incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasNoTrans && uplo == CblasLower)
+               || (order == CblasColMajor && trans == CblasTrans && uplo == CblasUpper)) {
+        
+        /* forward substitution */
+        ix = OFFSET(n, incX);
+        if (nonunit) {
+        	static if(isComplex!X)
+            	    const X aij = X(a[0].re, layoutIndicator*a[0].im);
+            	else
+                    const X aij = a[0];
+            x[ix] = x[ix]/aij;
+        }
+        ix += incX;
+        for (i = 1; i < n; i++) {
+            X tmp = x[ix];
+            jx = OFFSET(n, incX);
+            for (j = 0; j < i; j++) {
+            	static if(isComplex!X)
+            	    const X Aij = X(a[lda*i + j].re, layoutIndicator*a[lda*i + j].im);
+            	else
+                    const X Aij = a[lda*i + j];
+                tmp -= Aij * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	static if(isComplex!X)
+            	    const X aij = X(a[lda*i + i].re, layoutIndicator*a[lda*i + i].im);
+            	else
+                    const X aij = a[lda*i + i];
+                x[ix] = tmp/aij;
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasTrans && uplo == CblasUpper)
+               || (order == CblasColMajor && trans == CblasNoTrans && uplo == CblasLower)) {
+        
+        /* form  x := inv( A' )*x */
+        
+        /* forward substitution */
+        ix = OFFSET(n, incX);
+        if (nonunit) {
+        	static if(isComplex!X)
+            	    const X aij = X(a[0].re, layoutIndicator*a[0].im);
+            	else
+                    const X aij = a[0];
+            x[ix] = x[ix]/aij;
+        }
+        ix += incX;
+        for (i = 1; i < n; i++) {
+            X tmp = x[ix];
+            jx = OFFSET(n, incX);
+            for (j = 0; j < i; j++) {
+            	static if(isComplex!X)
+            	    const X Aji = X(a[lda*j + i].re, layoutIndicator*a[lda*j + i].im);
+            	else
+                    const X Aji = a[lda*j + i];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	static if(isComplex!X)
+            	    const X aij = X(a[lda*i + i].re, layoutIndicator*a[lda*i + i].im);
+            	else
+                    const X aij = a[lda*i + i];
+                x[ix] = tmp/aij;
+            } else {
+                x[ix] = tmp;
+            }
+            ix += incX;
+        }
+    } else if ((order == CblasRowMajor && trans == CblasTrans && uplo == CblasLower)
+               || (order == CblasColMajor && trans == CblasNoTrans && uplo == CblasUpper)) {
+        
+        /* backsubstitution */
+        ix = OFFSET(n, incX) + (n - 1) * incX;
+        if (nonunit) {
+        	static if(isComplex!X)
+            	    const X aij = X(a[lda * (n - 1) + (n - 1)].re, layoutIndicator*a[lda * (n - 1) + (n - 1)].im);
+            	else
+                    const X aij = a[lda * (n - 1) + (n - 1)];
+            x[ix] = x[ix] / aij;
+        }
+        ix -= incX;
+        for (i = n - 1; i > 0 && i--;) {
+            X tmp = x[ix];
+            jx = ix + incX;
+            for (j = i + 1; j < n; j++) {
+            	static if(isComplex!X)
+            	    const X Aji = X(a[lda*j + i].re, layoutIndicator*a[lda*j + i].im);
+            	else
+                    const X Aji = a[lda*j + i];
+                tmp -= Aji * x[jx];
+                jx += incX;
+            }
+            if (nonunit) {
+            	static if(isComplex!X)
+            	    const X aij = X(a[lda*i + i].re, layoutIndicator*a[lda*i + i].im);
+            	else
+                    const X aij = a[lda*i + i];
+                x[ix] = tmp/aij;
+            } else {
+                x[ix] = tmp;
+            }
+            ix -= incX;
+        }
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
 
 
 
