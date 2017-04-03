@@ -11,7 +11,7 @@ module dblas.l2;
 import std.stdio : writeln;
 
 import dblas.l1;
-import std.math: abs, fabs, sqrt;
+//import std.math: abs, fabs, sqrt;
 import std.complex: Complex, complex, conj;
 import std.algorithm.comparison : min, max;
 import std.traits : isFloatingPoint;
@@ -125,7 +125,7 @@ T TPLO(T)(T N, T i, T j){
 }
 
 
-T xhypot(T)(in T x, in T y)
+/*T xhypot(T)(in T x, in T y)
 {
     T xabs = fabs(x);
     T yabs = fabs(y);
@@ -146,7 +146,7 @@ T xhypot(T)(in T x, in T y)
     
     T u = xmin/xmax;
     return xmax*sqrt(1 + u*u);
-}
+}*/
 
 /**
 *  @title gbmv blas function: Computes a matrix-vector product using a general band
