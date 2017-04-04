@@ -23,6 +23,32 @@ import std.complex: Complex, complex;
 ** to make sure that they are running properly.
 */
 
+
+/* C function for hemm */
+extern (C){
+    void cblas_zhemm(in CBLAS_ORDER Order, in CBLAS_SIDE Side,
+                     in CBLAS_UPLO Uplo, in int M, in int N,
+                     in void *alpha, in void *A, in int lda, in void *B,
+                     in int ldb, in void *beta, void *C, in int ldc);
+}
+
+/* Testing for hemm */
+void test_hemm(){
+    CBLAS_LAYOUT order = CblasRowMajor;
+    CBLAS_SIDE side = CblasLeft;
+    CBLAS_UPLO uplo = CblasUpper;
+
+    Complex!double[] a = [complex(-0.359, 0.089)];
+    Complex!double[] b = [complex(-0.451, -0.337), complex(-0.901, -0.871)];
+    Complex!double[] c = [complex(0.729, 0.631), complex(0.364, 0.246)];
+    Complex!double alpha = complex(0, 0.1), beta = alpha;
+
+    int ldc = 2, ldb = 2, lda = 1, m = 1, n = 2;
+    hemm(order, side, uplo, m, n, alpha, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc);
+    writeln("hemm (Complex!double): ", c);
+}
+
+
 /* C function for gemm */
 extern (C){
     void cblas_dgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA,

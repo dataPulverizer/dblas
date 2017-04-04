@@ -18,13 +18,12 @@ import std.complex: Complex, complex;
 /* To compile: */
 /* dub build dblas # or dub run ... */
 
-/* C function for gemm */
+/* C function for hemm */
 extern (C){
-    void
-cblas_zhemm (in CBLAS_ORDER Order, in CBLAS_SIDE Side,
-             in CBLAS_UPLO Uplo, in int M, in int N,
-             in void *alpha, in void *A, in int lda, in void *B,
-             in int ldb, in void *beta, void *C, in int ldc);
+    void cblas_zhemm(in CBLAS_ORDER Order, in CBLAS_SIDE Side,
+                     in CBLAS_UPLO Uplo, in int M, in int N,
+                     in void *alpha, in void *A, in int lda, in void *B,
+                     in int ldb, in void *beta, void *C, in int ldc);
 }
 
 /* Testing for hemm */
@@ -44,7 +43,4 @@ void main(){
     hemm(order, side, uplo, m, n, alpha, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc);
     writeln("hemm (Complex!double): ", c);
 }
-
-/*void hemm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in N m, in N n,
-                in X* alpha, in X* a, in N lda, in X* b, in N ldb, in X* beta, X* c, in N ldc)*/
 
