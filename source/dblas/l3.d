@@ -228,7 +228,7 @@ void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSP
 /** 
 *  @title gemm Computes a matrix-matrix product where one input matrix is Hermitian.
 *
-*  @description      The ?hemm routines compute a scalar-matrix-matrix product using a Hermitian matrix 
+*  @description      The hemm routines compute a scalar-matrix-matrix product using a Hermitian matrix 
 *                    A and a general matrix B and add the result to a scalar-matrix product using a general
 *                    matrix C. The operation is defined as:
 *                    C := alpha*A*B + beta*C
@@ -427,7 +427,73 @@ void hemm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in
 
 
 
-
+/** 
+*  @title herk Performs a Hermitian rank-k update.
+*
+*  @description      The herk routines perform a rank-k matrix-matrix operation using a general matrix A and a Hermitian
+*                    matrix C. The operation is defined as
+*                    C := alpha*A*A H + beta*C,
+*                    or
+*                    C := alpha*A H *A + beta*C,
+*                    where
+*
+*                    alpha and beta are real scalars,
+*                    C is an n-by-n Hermitian matrix,
+*                    A is an n-by-k matrix in the first case and a k-by-n matrix in the second case.
+*
+*
+*  Input Parameters:
+*
+*  @param order:     Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:      Specifies whether the upper or lower triangular part of the array c is used.
+*                    If uplo = CblasUpper, then the upper triangular part of the array c is
+*                    used.
+*                    If uplo = CblasLower, then the low triangular part of the array c is used.
+*
+*  @param trans:     Specifies the operation:
+*                    if trans = CblasNoTrans , then C := alpha*A*A H + beta*C ;
+*                    if trans = CblasConjTrans , then C := alpha*A H *A + beta*C.
+*
+*  @param n:         Specifies the order of the matrix C. The value of n must be at least zero.
+*
+*  @param k:         With trans = CblasNoTrans , k specifies the number of columns of the
+*                    matrix A, and with trans = CblasConjTrans , k specifies the number of
+*                    rows of the matrix A.
+*                    The value of k must be at least zero.
+*
+*  @param alpha:     Specifies the scalar alpha.
+*
+*  @param a:         ...
+*
+*  @param lda:       ...
+*
+*  @param beta:      Specifies the scalar beta.
+*
+*  @param c:         Array, size ldc by n.
+*                    Before entry with uplo = CblasUpper , the leading n-by-n upper triangular
+*                    part of the array c must contain the upper triangular part of the Hermitian
+*                    matrix and the strictly lower triangular part of c is not referenced.
+*                    Before entry with uplo = CblasLower , the leading n-by-n lower triangular
+*                    part of the array c must contain the lower triangular part of the Hermitian
+*                    matrix and the strictly upper triangular part of c is not referenced.
+*                    The imaginary parts of the diagonal elements need not be set, they are
+*                    assumed to be zero.
+*
+*  @param ldc:       Specifies the leading dimension of c as declared in the calling
+*                    (sub)program. The value of ldc must be at least max(1, n).
+*
+*  Output Parameters
+*
+*  @param c:         With uplo = CblasUpper , the upper triangular part of the array c is
+*                    overwritten by the upper triangular part of the updated matrix.
+*  
+*                    With uplo = CblasLower , the lower triangular part of the array c is
+*                    overwritten by the lower triangular part of the updated matrix.
+*                    The imaginary parts of the diagonal elements are set to zero.
+*
+*/
 void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE trans, in N n, 
                 in N k, in V alpha, in X* a, in N lda, in V beta, X* c, in N ldc)
 {
@@ -451,16 +517,12 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
         if (uplo_ == CblasUpper) {
             for (i = 0; i < n; i++) {
                 for (j = i; j < n; j++) {
-                    /*REAL(C, ldc * i + j) = 0.0;
-                    IMAG(C, ldc * i + j) = 0.0;*/
                     c[ldc*i + j] = zero;
                 }
             }
         } else {
             for (i = 0; i < n; i++) {
                 for (j = 0; j <= i; j++) {
-                    /*REAL(C, ldc * i + j) = 0.0;
-                    IMAG(C, ldc * i + j) = 0.0;*/
                     c[ldc*i + j] = zero;
                 }
             }
@@ -468,31 +530,22 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     } else if (beta != 1.0) {
         if (uplo_ == CblasUpper) {
             for (i = 0; i < n; i++) {
-                /*REAL(C, ldc * i + i) *= beta;
-                IMAG(C, ldc * i + i) = 0;*/
                 c[ldc*i + i] *= X(c[ldc*i + i].re*beta, 0);
                 for (j = i + 1; j < n; j++) {
-                    /*REAL(C, ldc * i + j) *= beta;
-                    IMAG(C, ldc * i + j) *= beta;*/
                     c[ldc*i + j] *= beta;
                 }
             }
         } else {
             for (i = 0; i < n; i++) {
                 for (j = 0; j < i; j++) {
-                    /*REAL(C, ldc * i + j) *= beta;
-                    IMAG(C, ldc * i + j) *= beta;*/
                     c[ldc*i + j] *= beta;
                 }
-                /*REAL(C, ldc * i + i) *= beta;
-                IMAG(C, ldc * i + i) = 0;*/
                 c[ldc*i + i] = X(c[ldc*i + i].re*beta, 0);
             }
         }
     } else {
         /* set imaginary part of Aii to zero */
         for (i = 0; i < n; i++) {
-            /* IMAG(C, ldc * i + i) = 0.0; */
             c[ldc*i + i] = X(c[ldc*i + i].re, 0);
         }
     }
@@ -504,20 +557,10 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     
         for (i = 0; i < n; i++) {
             for (j = i; j < n; j++) {
-                /*BASE temp_real = 0.0;
-                BASE temp_imag = 0.0;*/
                 X temp = zero;
                 for (k_ = 0; k_ < k; k_++) {
-                    /*const BASE Aik_real = CONST_REAL(A, i * lda + k_);
-                    const BASE Aik_imag = CONST_IMAG(A, i * lda + k_);
-                    const BASE Ajk_real = CONST_REAL(A, j * lda + k_);
-                    const BASE Ajk_imag = -CONST_IMAG(A, j * lda + k_);
-                    temp_real += Aik_real * Ajk_real - Aik_imag * Ajk_imag;
-                    temp_imag += Aik_real * Ajk_imag + Aik_imag * Ajk_real;*/
                     temp += a[i*lda + k_]*X(a[j*lda + k_].re, -a[j*lda + k_].im);
                 }
-                /*REAL(C, i * ldc + j) += alpha * temp_real;
-                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
                 c[i*ldc + j] += alpha*temp;
             }
         }
@@ -526,20 +569,10 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     
         for (i = 0; i < n; i++) {
             for (j = i; j < n; j++) {
-                /*BASE temp_real = 0.0;
-                BASE temp_imag = 0.0;*/
                 X temp = zero;
                 for (k_ = 0; k_ < k; k_++) {
-                    /*const BASE Aki_real = CONST_REAL(A, k_ * lda + i);
-                    const BASE Aki_imag = -CONST_IMAG(A, k_ * lda + i);
-                    const BASE Akj_real = CONST_REAL(A, k_ * lda + j);
-                    const BASE Akj_imag = CONST_IMAG(A, k_ * lda + j);
-                    temp_real += Aki_real * Akj_real - Aki_imag * Akj_imag;
-                    temp_imag += Aki_real * Akj_imag + Aki_imag * Akj_real;*/
                     temp += X(a[k_*lda + i].re, -a[k_*lda + i].im)*a[k_*lda + j];
                 }
-                /*REAL(C, i * ldc + j) += alpha * temp_real;
-                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
                 c[i*ldc + j] += alpha*temp;
             }
         }
@@ -548,20 +581,10 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     
         for (i = 0; i < n; i++) {
             for (j = 0; j <= i; j++) {
-                /*BASE temp_real = 0.0;
-                BASE temp_imag = 0.0;*/
                 X temp = zero;
                 for (k_ = 0; k_ < k; k_++) {
-                    /*const BASE Aik_real = CONST_REAL(A, i * lda + k_);
-                    const BASE Aik_imag = CONST_IMAG(A, i * lda + k_);
-                    const BASE Ajk_real = CONST_REAL(A, j * lda + k_);
-                    const BASE Ajk_imag = -CONST_IMAG(A, j * lda + k_);
-                    temp_real += Aik_real * Ajk_real - Aik_imag * Ajk_imag;
-                    temp_imag += Aik_real * Ajk_imag + Aik_imag * Ajk_real;*/
                     temp += a[i*lda + k_]*X(a[j*lda + k_].re, -a[j*lda + k_].im);
                 }
-                /*REAL(C, i * ldc + j) += alpha * temp_real;
-                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
                 c[i*ldc + j] += alpha*temp;
             }
         }
@@ -570,20 +593,10 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     
         for (i = 0; i < n; i++) {
             for (j = 0; j <= i; j++) {
-                /*BASE temp_real = 0.0;
-                BASE temp_imag = 0.0;*/
                 X temp = zero;
                 for (k_ = 0; k_ < k; k_++) {
-                    /*const BASE Aki_real = CONST_REAL(A, k_ * lda + i);
-                    const BASE Aki_imag = -CONST_IMAG(A, k_ * lda + i);
-                    const BASE Akj_real = CONST_REAL(A, k_ * lda + j);
-                    const BASE Akj_imag = CONST_IMAG(A, k_ * lda + j);
-                    temp_real += Aki_real * Akj_real - Aki_imag * Akj_imag;
-                    temp_imag += Aki_real * Akj_imag + Aki_imag * Akj_real;*/
                     temp += a[k_*lda + j]*X(a[k_*lda + i].re, -a[k_*lda + i].im);
                 }
-                /*REAL(C, i * ldc + j) += alpha * temp_real;
-                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
                 c[i*ldc + j] += alpha*temp;
             }
         }

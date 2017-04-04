@@ -11,7 +11,6 @@ public import dblas.l1;
 public import dblas.l2;
 public import dblas.l3;
 
-
 import std.stdio : writeln;
 import std.complex: Complex, complex;
 

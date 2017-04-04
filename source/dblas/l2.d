@@ -124,30 +124,6 @@ T TPLO(T)(T N, T i, T j){
 	return (i*(i + 1))/2 + j;
 }
 
-
-/*T xhypot(T)(in T x, in T y)
-{
-    T xabs = fabs(x);
-    T yabs = fabs(y);
-    T xmin, xmax;
-    
-    if(xabs < yabs){
-        xmin = xabs;
-        xmax = yabs;
-    } else {
-        xmin = yabs;
-        xmax = xabs;
-    }
-    
-    if(xmin == 0) 
-    {
-        return xmax;
-    }
-    
-    T u = xmin/xmax;
-    return xmax*sqrt(1 + u*u);
-}*/
-
 /**
 *  @title gbmv blas function: Computes a matrix-vector product using a general band
 *                             matrix
@@ -240,23 +216,6 @@ void gbmv(N, X)(in CBLAS_LAYOUT layout, in CBLAS_TRANSPOSE transA, in N m, in N 
 {
 	N i, j, lenX, lenY, L, U, iy, jx;
 
-	/*static if(isComplex!X && transA == CblasConjTrans){
-		X zero = complex(0, 0);
-		X one = complex(1, 0);
-		alias conjFun = conj;
-	}else{
-		X conjFun(X x){
-			return x;
-		}
-		static if(isComplex!X){
-			X zero = complex(0, 0);
-		    X one = complex(1, 0);
-		}else{
-			X zero = 0;
-		    X one = 1;
-		}
-	}*/
-
 	CBLAS_TRANSPOSE trans = (transA != CblasConjTrans) ? transA : CblasTrans;
 	
 	if(m == 0 || n == 0)
@@ -343,8 +302,6 @@ void gbmv(N, X: Complex!V, V = typeof(X.re))(in CBLAS_LAYOUT layout, in CBLAS_TR
 	        X* y, in N incY)
 {
 	N i, j, lenX, lenY, L, U, iy, jx;
-
-	//CBLAS_TRANSPOSE trans = (transA != CblasConjTrans) ? transA : CblasTrans;
 
 	CBLAS_TRANSPOSE trans = transA;
 
@@ -606,8 +563,7 @@ void gemv(N, X: Complex!V, V = typeof(X.re))(in CBLAS_LAYOUT layout, in CBLAS_TR
 {
   	N i, j;
     N lenX, lenY;
-  
-    //CBLAS_TRANSPOSE trans = (transA != CblasConjTrans) ? transA : CblasTrans;
+
     CBLAS_TRANSPOSE trans = transA;
 
 	X zero = complex(0, 0), one = complex(1, 0);
@@ -788,39 +744,6 @@ void ger(N, X)(in CBLAS_ORDER layout, in N m, in N n, in X alpha, in X* x, in N 
       assert(0, "unrecognized operation");
     }
 }
-
-/*void ger(N, X: Complex!V, V = typeof(X.re))(in CBLAS_ORDER layout, in N m, in N n, in X alpha,
-	           in X* x, in N incX, in X* y, in N incY, X* A, in N lda)
-{
-	N i, j;
-
-    if (layout == CblasRowMajor){
-      N ix = OFFSET(m, incX);
-      for (i = 0; i < m; ++i) {
-        const X tmp = alpha * x[ix];
-        N jy = OFFSET(n, incY);
-        for (j = 0; j < n; ++j) {
-          A[lda * i + j] += conj(y[jy]) * tmp;
-          jy += incY;
-        }
-        ix += incX;
-      }
-    } else if (layout == CblasColMajor){
-      N jy = OFFSET(n, incY);
-      for (j = 0; j < n; ++j) {
-        const X tmp = alpha * conj(y[jy]);
-        N ix = OFFSET(m, incX);
-        for (i = 0; i < m; ++i) {
-          A[i + lda * j] += x[ix] * tmp;
-          ix += incX;
-        }
-        jy += incY;
-      }
-    } else {
-      assert(0, "unrecognized operation");
-    }
-}*/
-
 
 template gerComplex(CBLAS_TRANSPOSE trans){
 
