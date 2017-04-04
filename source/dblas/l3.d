@@ -80,9 +80,9 @@ import std.complex: Complex, complex, conj;
 *
 */
 void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSPOSE transB, in N m, in N n,
-                in N K, in X alpha, in X* a, in N lda, in X* b, in N ldb, in X beta, X* c, in N ldc)
+                in N k, in X alpha, in X* a, in N lda, in X* b, in N ldb, in X beta, X* c, in N ldc)
 {
-    N i, j, k;
+    N i, j, k_;
     N n1, n2;
     N ldf, ldg;
     N conjF, conjG, transF, transG;
@@ -136,19 +136,19 @@ void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSP
     
     if (transF == CblasNoTrans && transG == CblasNoTrans) {
         /* form  C := alpha*A*B + C */
-        for (k = 0; k < K; k++) {
+        for (k_ = 0; k_ < k; k_++) {
             for (i = 0; i < n1; i++) {
                 static if(isComplex!X)
-                        const X Fik = X(F[ldf*i + k].re, conjF*F[ldf*i + k].im);
+                        const X Fik = X(F[ldf*i + k_].re, conjF*F[ldf*i + k_].im);
                     else
-                        const X Fik = F[ldf*i + k];
+                        const X Fik = F[ldf*i + k_];
                 const X temp = alpha*Fik;
                 if (temp != zero) {
                     for (j = 0; j < n2; j++) {
                         static if(isComplex!X)
-                            const X Gkj = X(G[ldg*k + j].re, conjG*F[ldg*k + j].im);
+                            const X Gkj = X(G[ldg*k_ + j].re, conjG*F[ldg*k_ + j].im);
                         else
-                            const X Gkj = G[ldg*k + j];
+                            const X Gkj = G[ldg*k_ + j];
                         c[ldc * i + j] += temp * Gkj;
                     }
                 }
@@ -162,14 +162,14 @@ void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSP
         for (i = 0; i < n1; i++) {
             for (j = 0; j < n2; j++) {
                 X temp = zero;
-                for (k = 0; k < K; k++) {
+                for (k_ = 0; k_ < k; k_++) {
                     static if(isComplex!X){
-                        const X Fik = X(F[ldf*i + k].re, conjF*F[ldf*i + k].im);
-                        const X Gjk = X(G[ldg*j + k].re, conjG*G[ldg*j + k].im);
+                        const X Fik = X(F[ldf*i + k_].re, conjF*F[ldf*i + k_].im);
+                        const X Gjk = X(G[ldg*j + k_].re, conjG*G[ldg*j + k_].im);
                     }
                     else{
-                        const X Fik = F[ldf*i + k];
-                        const X Gjk = G[ldg*j + k];
+                        const X Fik = F[ldf*i + k_];
+                        const X Gjk = G[ldg*j + k_];
                     }
                     temp += Fik*Gjk;
                 }
@@ -179,19 +179,19 @@ void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSP
     
     } else if (transF == CblasTrans && transG == CblasNoTrans) {
     
-        for (k = 0; k < K; k++) {
+        for (k_ = 0; k_ < k; k_++) {
             for (i = 0; i < n1; i++) {
                 static if(isComplex!X)
-                        const X Fki = X(F[ldf*k + i].re, conjF*F[ldf*k + i].im);
+                        const X Fki = X(F[ldf*k_ + i].re, conjF*F[ldf*k_ + i].im);
                     else
-                        const X Fki = F[ldf*k + i];
+                        const X Fki = F[ldf*k_ + i];
                 const X temp = alpha*Fki;
                 if (temp != zero) {
                     for (j = 0; j < n2; j++) {
                         static if(isComplex!X)
-                            const X Gkj = X(G[ldg*k + j].re, conjG*G[ldg*k + j].im);
+                            const X Gkj = X(G[ldg*k_ + j].re, conjG*G[ldg*k_ + j].im);
                         else
-                            const X Gkj = G[ldg*k + j];
+                            const X Gkj = G[ldg*k_ + j];
                         c[ldc * i + j] += temp*Gkj;
                     }
                 }
@@ -203,14 +203,14 @@ void gemm(N, X)(in CBLAS_ORDER order, in CBLAS_TRANSPOSE transA, in CBLAS_TRANSP
         for (i = 0; i < n1; i++) {
             for (j = 0; j < n2; j++) {
                 X temp = zero;
-                for (k = 0; k < K; k++) {
+                for (k_ = 0; k_ < k; k_++) {
                     static if(isComplex!X){
-                        const X Fki = X(F[ldf*k + i].re, conjF*F[ldf*k + i].im);
-                        const X Gjk = X(G[ldg*j + k].re, conjG*G[ldg*j + k].im);
+                        const X Fki = X(F[ldf*k_ + i].re, conjF*F[ldf*k_ + i].im);
+                        const X Gjk = X(G[ldg*j + k_].re, conjG*G[ldg*j + k_].im);
                     }
                     else{
-                        const X Fki = F[ldf*k + i];
-                        const X Gjk = G[ldg*j + k];
+                        const X Fki = F[ldf*k_ + i];
+                        const X Gjk = G[ldg*j + k_];
                     }
                     temp += Fki * Gjk;
                 }
@@ -425,6 +425,173 @@ void hemm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in
     }
 }
 
+
+
+
+void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE trans, in N n, 
+                in N k, in V alpha, in X* a, in N lda, in V beta, X* c, in N ldc)
+{
+    N i, j, k_;
+    N uplo_, trans_;
+    X zero = X(0), one = X(1);
+    
+    if (beta == 1.0 && (alpha == 0.0 || k == 0))
+        return;
+    
+    if (order == CblasRowMajor) {
+        uplo_ = uplo;
+        trans_ = trans;
+    } else {
+        uplo_ = (uplo == CblasUpper) ? CblasLower : CblasUpper;
+        trans_ = (trans == CblasNoTrans) ? CblasConjTrans : CblasNoTrans;
+    }
+    
+    /* form  y := beta*y */
+    if (beta == 0.0) {
+        if (uplo_ == CblasUpper) {
+            for (i = 0; i < n; i++) {
+                for (j = i; j < n; j++) {
+                    /*REAL(C, ldc * i + j) = 0.0;
+                    IMAG(C, ldc * i + j) = 0.0;*/
+                    c[ldc*i + j] = zero;
+                }
+            }
+        } else {
+            for (i = 0; i < n; i++) {
+                for (j = 0; j <= i; j++) {
+                    /*REAL(C, ldc * i + j) = 0.0;
+                    IMAG(C, ldc * i + j) = 0.0;*/
+                    c[ldc*i + j] = zero;
+                }
+            }
+        }
+    } else if (beta != 1.0) {
+        if (uplo_ == CblasUpper) {
+            for (i = 0; i < n; i++) {
+                /*REAL(C, ldc * i + i) *= beta;
+                IMAG(C, ldc * i + i) = 0;*/
+                c[ldc*i + i] *= X(c[ldc*i + i].re*beta, 0);
+                for (j = i + 1; j < n; j++) {
+                    /*REAL(C, ldc * i + j) *= beta;
+                    IMAG(C, ldc * i + j) *= beta;*/
+                    c[ldc*i + j] *= beta;
+                }
+            }
+        } else {
+            for (i = 0; i < n; i++) {
+                for (j = 0; j < i; j++) {
+                    /*REAL(C, ldc * i + j) *= beta;
+                    IMAG(C, ldc * i + j) *= beta;*/
+                    c[ldc*i + j] *= beta;
+                }
+                /*REAL(C, ldc * i + i) *= beta;
+                IMAG(C, ldc * i + i) = 0;*/
+                c[ldc*i + i] = X(c[ldc*i + i].re*beta, 0);
+            }
+        }
+    } else {
+        /* set imaginary part of Aii to zero */
+        for (i = 0; i < n; i++) {
+            /* IMAG(C, ldc * i + i) = 0.0; */
+            c[ldc*i + i] = X(c[ldc*i + i].re, 0);
+        }
+    }
+    
+    if (alpha == 0.0)
+        return;
+    
+    if (uplo_ == CblasUpper && trans_ == CblasNoTrans) {
+    
+        for (i = 0; i < n; i++) {
+            for (j = i; j < n; j++) {
+                /*BASE temp_real = 0.0;
+                BASE temp_imag = 0.0;*/
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    /*const BASE Aik_real = CONST_REAL(A, i * lda + k_);
+                    const BASE Aik_imag = CONST_IMAG(A, i * lda + k_);
+                    const BASE Ajk_real = CONST_REAL(A, j * lda + k_);
+                    const BASE Ajk_imag = -CONST_IMAG(A, j * lda + k_);
+                    temp_real += Aik_real * Ajk_real - Aik_imag * Ajk_imag;
+                    temp_imag += Aik_real * Ajk_imag + Aik_imag * Ajk_real;*/
+                    temp += a[i*lda + k_]*X(a[j*lda + k_].re, -a[j*lda + k_].im);
+                }
+                /*REAL(C, i * ldc + j) += alpha * temp_real;
+                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
+                c[i*ldc + j] += alpha*temp;
+            }
+        }
+    
+    } else if (uplo_ == CblasUpper && trans_ == CblasConjTrans) {
+    
+        for (i = 0; i < n; i++) {
+            for (j = i; j < n; j++) {
+                /*BASE temp_real = 0.0;
+                BASE temp_imag = 0.0;*/
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    /*const BASE Aki_real = CONST_REAL(A, k_ * lda + i);
+                    const BASE Aki_imag = -CONST_IMAG(A, k_ * lda + i);
+                    const BASE Akj_real = CONST_REAL(A, k_ * lda + j);
+                    const BASE Akj_imag = CONST_IMAG(A, k_ * lda + j);
+                    temp_real += Aki_real * Akj_real - Aki_imag * Akj_imag;
+                    temp_imag += Aki_real * Akj_imag + Aki_imag * Akj_real;*/
+                    temp += X(a[k_*lda + i].re, -a[k_*lda + i].im)*a[k_*lda + j];
+                }
+                /*REAL(C, i * ldc + j) += alpha * temp_real;
+                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
+                c[i*ldc + j] += alpha*temp;
+            }
+        }
+    
+    } else if (uplo_ == CblasLower && trans_ == CblasNoTrans) {
+    
+        for (i = 0; i < n; i++) {
+            for (j = 0; j <= i; j++) {
+                /*BASE temp_real = 0.0;
+                BASE temp_imag = 0.0;*/
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    /*const BASE Aik_real = CONST_REAL(A, i * lda + k_);
+                    const BASE Aik_imag = CONST_IMAG(A, i * lda + k_);
+                    const BASE Ajk_real = CONST_REAL(A, j * lda + k_);
+                    const BASE Ajk_imag = -CONST_IMAG(A, j * lda + k_);
+                    temp_real += Aik_real * Ajk_real - Aik_imag * Ajk_imag;
+                    temp_imag += Aik_real * Ajk_imag + Aik_imag * Ajk_real;*/
+                    temp += a[i*lda + k_]*X(a[j*lda + k_].re, -a[j*lda + k_].im);
+                }
+                /*REAL(C, i * ldc + j) += alpha * temp_real;
+                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
+                c[i*ldc + j] += alpha*temp;
+            }
+        }
+    
+    } else if (uplo_ == CblasLower && trans_ == CblasConjTrans) {
+    
+        for (i = 0; i < n; i++) {
+            for (j = 0; j <= i; j++) {
+                /*BASE temp_real = 0.0;
+                BASE temp_imag = 0.0;*/
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    /*const BASE Aki_real = CONST_REAL(A, k_ * lda + i);
+                    const BASE Aki_imag = -CONST_IMAG(A, k_ * lda + i);
+                    const BASE Akj_real = CONST_REAL(A, k_ * lda + j);
+                    const BASE Akj_imag = CONST_IMAG(A, k_ * lda + j);
+                    temp_real += Aki_real * Akj_real - Aki_imag * Akj_imag;
+                    temp_imag += Aki_real * Akj_imag + Aki_imag * Akj_real;*/
+                    temp += a[k_*lda + j]*X(a[k_*lda + i].re, -a[k_*lda + i].im);
+                }
+                /*REAL(C, i * ldc + j) += alpha * temp_real;
+                IMAG(C, i * ldc + j) += alpha * temp_imag;*/
+                c[i*ldc + j] += alpha*temp;
+            }
+        }
+    
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
 
 
 
