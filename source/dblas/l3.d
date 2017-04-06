@@ -991,6 +991,182 @@ void syrk(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE tra
     }
 }
 
+/** 
+*  @title syr2k Performs a symmetric rank-2k update.
+*
+*  @description            The syr2k routines perform a rank-2k matrix-matrix operation for a symmetric matrix C using general
+*                          matrices A and B. The operation is defined as:
+*                          C := alpha*A*B' + alpha*B*A' + beta*C,
+*                          or
+*                          C := alpha*A'*B + alpha*B'*A + beta*C,
+*                          where
+*                          
+*                          alpha and beta are scalars,
+*                          C is an n-by-n symmetric matrix,
+*                          A and B are n-by-k matrices in the first case, and k-by-n matrices in the second case.
+*                          
+*  Input Parameters:       
+*                          
+*  @param order:           Specifies whether two-dimensional array storage is row-major
+*                          (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:            Specifies whether the upper or lower triangular part of the array c is used.
+*                          If uplo = CblasUpper, then the upper triangular part of the array c is
+*                          used.
+*                          If uplo = CblasLower, then the low triangular part of the array c is used.
+*
+*  @param trans:           Specifies the operation:
+*                          if trans = CblasNoTrans , then C := alpha*A*B'+ alpha*B*A'+ beta*C ;
+*                          if trans = CblasTrans , then C := alpha*A'*B + alpha*B'*A + beta*C ;
+*                          if trans = CblasConjTrans , then C := alpha*A'*B + alpha*B'*A
+*                          + beta*C.
+*
+*  @param n:               Specifies the order of the matrix C. The value of n must be at least zero.
+*
+*  @param k:               On entry with trans = CblasNoTrans , k specifies the number of columns of
+*                          the matrices A and B, and on entry with trans = CblasTrans or
+*                          trans = CblasConjTrans , k specifies the number of rows of the matrices A
+*                          and B. The value of k must be at least zero.
+*
+*  @param alpha:           Specifies the scalar alpha.
+*
+*  @param a:               ...
+*
+*  @param lda:             Specifies the leading dimension of a as declared in the calling
+*                          (sub)program.
+*  @param b:               ...
+*
+*  @param ldb:             Specifies the leading dimension of a as declared in the calling
+*                          (sub)program.
+*
+*  @param beta:            Specifies the scalar beta.
+*
+*  @param c:               Array, size ldc* n . Before entry with uplo = CblasUpper , the leading n-
+*                          by-n upper triangular part of the array c must contain the upper triangular
+*                          part of the symmetric matrix and the strictly lower triangular part of c is not
+*                          referenced.
+*
+*                          Before entry with uplo = CblasLower , the leading n-by-n lower triangular
+*                          part of the array c must contain the lower triangular part of the symmetric
+*                          matrix and the strictly upper triangular part of c is not referenced.
+*
+*  @param ldc:             Specifies the leading dimension of c as declared in the calling
+*                          (sub)program. The value of ldc must be at least max(1, n).
+*
+*  Output Parameters:
+*
+*  @param c:               With uplo = CblasUpper , the upper triangular part of the array c is
+*                          overwritten by the upper triangular part of the updated matrix.
+*                          
+*                          With uplo = CblasLower , the lower triangular part of the array c is
+*                          overwritten by the lower triangular part of the updated matrix.
+*
+*/
+void syr2k(N, X)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE trans, in N n, in N k,
+                 in X alpha, in X* a, in N lda, in X* b, in N ldb, in X beta, X* c, in N ldc)
+{
+    N i, j, k_;
+    N uplo_, trans_;
+    X zero = X(0), one = X(1);
+    
+    if (alpha == zero && beta == one)
+        return;
+    
+    if (order == CblasRowMajor) {
+        uplo_ = uplo;
+        trans_ = (trans == CblasConjTrans) ? CblasTrans : trans;
+    } else {
+        uplo_ = (uplo == CblasUpper) ? CblasLower : CblasUpper;
+        
+        if (trans == CblasTrans || trans == CblasConjTrans) {
+            trans_ = CblasNoTrans;
+        } else {
+            trans_ = CblasTrans;
+        }
+    }
+    /* form  C := beta*C */
+    if (beta == zero) {
+        if (uplo_ == CblasUpper) {
+            for (i = 0; i < n; i++) {
+                for (j = i; j < n; j++) {
+                    c[ldc * i + j] = zero;
+                }
+            }
+        } else {
+            for (i = 0; i < n; i++) {
+                for (j = 0; j <= i; j++) {
+                    c[ldc * i + j] = zero;
+                }
+            }
+        }
+    } else if (beta != one) {
+        if (uplo_ == CblasUpper) {
+            for (i = 0; i < n; i++) {
+                for (j = i; j < n; j++) {
+                    c[ldc * i + j] *= beta;
+                }
+            }
+        } else {
+            for (i = 0; i < n; i++) {
+                for (j = 0; j <= i; j++) {
+                    c[ldc * i + j] *= beta;
+                }
+            }
+        }
+    }
+    if (alpha == zero)
+        return;
+    
+    if (uplo_ == CblasUpper && trans_ == CblasNoTrans) {
+    
+        for (i = 0; i < n; i++) {
+            for (j = i; j < n; j++) {
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    temp += (a[i * lda + k_] * b[j * ldb + k_]
+                             + b[i * ldb + k_] * a[j * lda + k_]);
+                }
+                c[i * ldc + j] += alpha * temp;
+            }
+        }
+    } else if (uplo_ == CblasUpper && trans_ == CblasTrans) {
+        for (k_ = 0; k_ < k; k_++) {
+            for (i = 0; i < n; i++) {
+                X temp1 = alpha * a[k_ * lda + i];
+                X temp2 = alpha * b[k_ * ldb + i];
+                for (j = i; j < n; j++) {
+                    c[i * lda + j] += temp1 * b[k_ * ldb + j] + temp2 * a[k_ * lda + j];
+                }
+            }
+        }
+    } else if (uplo_ == CblasLower && trans_ == CblasNoTrans) {
+        for (i = 0; i < n; i++) {
+            for (j = 0; j <= i; j++) {
+                X temp = zero;
+                for (k_ = 0; k_ < k; k_++) {
+                    temp += (a[i * lda + k_] * b[j * ldb + k_]
+                             + b[i * ldb + k_] * a[j * lda + k_]);
+                }
+                c[i * ldc + j] += alpha * temp;
+            }
+        }
+    } else if (uplo_ == CblasLower && trans == CblasTrans) {
+    
+        for (k_ = 0; k_ < k; k_++) {
+            for (i = 0; i < n; i++) {
+                X temp1 = alpha * a[k_ * lda + i];
+                X temp2 = alpha * b[k_ * ldb + i];
+                for (j = 0; j <= i; j++) {
+                    c[i * lda + j] += temp1 * b[k_ * ldb + j] + temp2 * a[k_ * lda + j];
+                }
+            }
+        }
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
+
+
 
 
 

@@ -17,34 +17,39 @@ import std.complex: Complex, complex;
 /* To compile: */
 /* dub build dblas # or dub run ... */
 
-/* C function for syrk */
+/* C function for syr2k */
 extern (C){
-    void cblas_dsyrk (in CBLAS_ORDER Order, in CBLAS_UPLO Uplo, in CBLAS_TRANSPOSE Trans, in int N, in int K,
-                      in double alpha, in double *A, in int lda, in double beta, double *C, in int ldc);
+    void cblas_dsyr2k (in CBLAS_ORDER Order, in CBLAS_UPLO Uplo, in CBLAS_TRANSPOSE Trans, in int N, in int K,
+                       in double alpha, in double *A, in int lda, in double *B, in int ldb, in double beta, double *C, in int ldc);
 }
 
-/* Testing for syrk */
+/* Testing for syr2k */
 void main(){
+
     CBLAS_ORDER order = CblasRowMajor;
-    CBLAS_TRANSPOSE trans = CblasNoTrans;
     CBLAS_UPLO uplo = CblasUpper;
+    CBLAS_TRANSPOSE trans = CblasNoTrans;
+    int n = 1;
+    int k = 2;
+    double alpha = 0.1;
+    double beta = 0;
+    double[] a = [-0.225, 0.857];
+    double[] b = [-0.933, 0.994];
+    double[] c = [0.177];
+    int lda = 2, ldb = 2, ldc = 1;
 
-    int n = 2;
-    int k = 1;
-    double alpha = -1.0;
-    double beta = 0.1;
-    double[] a = [0.412, -0.229];
-    double[] c = [0.628, -0.664, -0.268, 0.096];
-    int lda = 1, ldc = 2;
-    syrk(order, uplo, trans, n, k, alpha, a.ptr, lda, beta, c.ptr, ldc);
+    //double C_expected[] = { 0.2123566 };
+    syr2k(order, uplo, trans, n, k, alpha, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc);
+    writeln("syr2k: ", c);
 
-    Complex!double alphac = complex(1, 0);
-    Complex!double betac = complex(1, 0);
-    Complex!double[] ac = [complex(-0.049, -0.687), complex(-0.434, 0.294)];
-    Complex!double[] cc = [complex(0.937, -0.113), complex(0.796, 0.293), complex(0.876, -0.199), complex(-0.757, -0.103)];
-    syrk(order, uplo, trans, n, k, alphac, ac.ptr, lda, betac, cc.ptr, ldc);
+    Complex!double alphac = complex(0, 0);
+    Complex!double betac = complex(-0.3, 0.1);
+    Complex!double[] ac = [complex(-0.315, 0.03), complex(0.281, 0.175)];
+    Complex!double[] bc = [complex(-0.832, -0.964), complex(0.291, 0.476)];
+    Complex!double[] cc = [complex(-0.341, 0.743)];
+    //double C_expected[] = { 0.028, -0.257 };
 
-    writeln("syrk: ", c);
-    writeln("syrk (Complex!double): ", cc);
+    syr2k(order, uplo, trans, n, k, alphac, ac.ptr, lda, bc.ptr, ldb, betac, cc.ptr, ldc);
+    writeln("syr2k (Complex!double): ", cc);
 }
 
