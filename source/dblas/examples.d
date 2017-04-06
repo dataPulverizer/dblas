@@ -23,6 +23,66 @@ import std.complex: Complex, complex;
 ** to make sure that they are running properly.
 */
 
+/* C function for symm */
+extern (C){
+    void cblas_dsymm(in CBLAS_ORDER Order, in CBLAS_SIDE Side, in CBLAS_UPLO Uplo, in int M, in int N, in double alpha,
+                     in double *A, in int lda, in double *B, in int ldb, in double beta, double *C, in int ldc);
+}
+
+/* Testing for symm */
+void test_symm(){
+    CBLAS_ORDER order = CblasRowMajor;
+    CBLAS_SIDE side = CblasRight;
+    CBLAS_UPLO uplo = CblasUpper;
+    int m = 1;
+    int n = 2;
+    double alpha = -1;
+    double beta = 1;
+    double[] a = [0.591, -0.01, -0.192, -0.376];
+    double[] b = [0.561, 0.946];
+    double[] c = [0.763, 0.189];
+
+    Complex!double alphac = complex(-1, 0);
+    Complex!double betac = complex(-0.3, 0.1);
+    Complex!double[] ac = [complex(-0.835, 0.344), complex(0.975, 0.634), complex(0.312, -0.659), complex(-0.624, -0.175)];
+    Complex!double[] bc = [complex(-0.707, -0.846), complex(0.825, -0.661)];
+    Complex!double[] cc = [complex(0.352, -0.499), complex(0.267, 0.548)];
+
+    int lda = 2, ldb = 2, ldc = 2;
+    symm(order, side, uplo, 1, 2, alpha, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc);
+    symm(order, side, uplo, 1, 2, alphac, ac.ptr, lda, bc.ptr, ldb, betac, cc.ptr, ldc);
+    writeln("symm: ", c);
+    writeln("symm (Complex!double): ", cc);
+}
+
+
+/* C function for her2k */
+extern (C){
+    void cblas_zher2k(in CBLAS_ORDER Order, in CBLAS_UPLO Uplo, in CBLAS_TRANSPOSE Trans, in int N, in int K, in void *alpha, 
+                      in void *A, in int lda, in void *B, in int ldb, in double beta, void *C, in int ldc);
+}
+
+/* Testing for her2k */
+void test_her2k(){
+
+    CBLAS_ORDER order = CblasRowMajor;
+    CBLAS_UPLO uplo = CblasUpper;
+    CBLAS_TRANSPOSE trans = CblasNoTrans;
+
+    int n = 1;
+    int k = 2;
+
+    Complex!double alpha = complex(-1.0, 0.0);
+    double beta = -0.3;
+    Complex!double[] a = [complex(0.178, 0.545), complex(-0.491, 0.979)];
+    Complex!double[] b = [complex(-0.665, -0.531), complex(-0.4, 0.227)];
+    Complex!double[] c = [complex(0.115, -0.193)];
+
+    int lda = 2, ldb = 2, ldc = 1;
+
+    //her2k(order, uplo, trans, n, k, alpha, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc);
+    writeln("her2k (Complex!double): ", c);
+}
 
 /* C function for herk */
 extern (C){
@@ -31,7 +91,7 @@ extern (C){
 }
 
 /* Testing for herk */
-void cblas_zherk(){
+void test_zherk(){
     CBLAS_TRANSPOSE transA = CblasNoTrans;
     CBLAS_ORDER order = CblasColMajor;
     CBLAS_UPLO uplo = CblasUpper;
@@ -43,8 +103,6 @@ void cblas_zherk(){
     Complex!double[] a = [complex(0.16, 0.464), complex(-0.623, 0.776)];
     Complex!double[] c = [complex(0.771, -0.449), complex(0.776, 0.112), complex(-0.134, 0.317), complex(0.547, -0.551)];
     int lda = 2, ldc = 2;
-
-    // double C_expected[] = { 1.011896, 0.0, 0.776, 0.112, 0.126384, -0.096232, 1.537305, 0.0 };
 
     herk(order, uplo, trans, n, k, alpha, a.ptr, lda, beta, c.ptr, ldc);
 

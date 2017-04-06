@@ -606,5 +606,211 @@ void herk(N, X: Complex!V, V)(in CBLAS_ORDER order, in CBLAS_UPLO uplo, in CBLAS
     }
 }
 
+/** 
+*  @title symm Computes a matrix-matrix product where one input matrix is symmetric.
+*
+*  @description      The symm routines compute a scalar-matrix-matrix product with one symmetric matrix and add 
+*                    the result to a scalar-matrix product. The operation is defined as:
+*                    C := alpha*A*B + beta*C,
+*                    or
+*                    C := alpha*B*A + beta*C,
+*                    where
+*
+*                    alpha and beta are scalars,
+*                    A is a symmetric matrix,
+*                    B and C are m-by-n matrices.
+*
+*  Input Parameters:
+*
+*  @param order:     Specifies whether two-dimensional array storage is row-major
+*                    (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param side:      Specifies whether the symmetric matrix A appears on the left or right in the
+*                    operation:
+*                    if side = CblasLeft , then C := alpha*A*B + beta*C;
+*                    if side = CblasRight , then C := alpha*B*A + beta*C.
+*
+*  @param uplo:      Specifies whether the upper or lower triangular part of the symmetric
+*                    matrix A is used:
+*
+*                    if uplo = CblasUpper, then the upper triangular part is used;
+*                    if uplo = CblasLower, then the lower triangular part is used.
+*
+*  @param m:         Specifies the number of rows of the matrix C.
+*                    The value of m must be at least zero.
+*
+*  @param n:         Specifies the number of columns of the matrix C.
+*                    The value of n must be at least zero.
+*
+*  @param alpha:     Specifies the scalar alpha.
+*
+*  @param a:         Array, size lda* ka , where ka is m when side = CblasLeft and is n
+*                    otherwise.
+*
+*                    Before entry with side = CblasLeft , the m-by-m part of the array a must
+*                    contain the symmetric matrix, such that when uplo = CblasUpper , the
+*                    leading m-by-m upper triangular part of the array a must contain the upper
+*                    triangular part of the symmetric matrix and the strictly lower triangular part
+*                    of a is not referenced, and when side = CblasLeft , the leading m-by-m
+*                    lower triangular part of the array a must contain the lower triangular part of
+*                    the symmetric matrix and the strictly upper triangular part of a is not
+*                    referenced.
+*
+*                    Before entry with side = CblasRight , the n-by-n part of the array a must
+*                    contain the symmetric matrix, such that when uplo = CblasUpper e array a
+*                    must contain the upper triangular part of the symmetric matrix and the
+*                    strictly lower triangular part of a is not referenced, and when side =
+*                    CblasLeft , the leading n-by-n lower triangular part of the array a must
+*                    contain the lower triangular part of the symmetric matrix and the strictly
+*                    upper triangular part of a is not referenced.
+*
+*  @param lda:       Specifies the leading dimension of a as declared in the calling
+*                    (sub)program. When side = CblasLeft then lda must be at least max(1,
+*                    m) , otherwise lda must be at least max(1, n) .
+*
+*  @param b:         For Layout = CblasColMajor : array, size ldb*n. The leading m-by-n part
+*                    of the array b must contain the matrix B.
+*                    For Layout = CblasRowMajor : array, size ldb*m. The leading n-by-m part
+*                    of the array b must contain the matrix B
+*
+*  @param ldb:       Specifies the leading dimension of b as declared in the calling
+*                    (sub)program. When Layout = CblasColMajor , ldb must be at least
+*                    max(1, m) ; otherwise, ldb must be at least max(1, n) .
+*
+*  @param beta:      Specifies the scalar beta.
+*                    When beta is set to zero, then c need not be set on input.
+*
+*  @param c:         For Layout = CblasColMajor : array, size ldc*n . Before entry, the leading
+*                    m-by-n part of the array c must contain the matrix C, except when beta is
+*                    zero, in which case c need not be set on entry.
+*                    For Layout = CblasRowMajor : array, size ldc*m . Before entry, the leading
+*                    n-by-m part of the array c must contain the matrix C, except when beta is
+*                    zero, in which case c need not be set on entry.
+*
+*  @param ldc:       Specifies the leading dimension of c as declared in the calling
+*                    (sub)program. When Layout = CblasColMajor , ldc must be at least
+*                    max(1, m) ; otherwise, ldc must be at least max(1, n).
+*
+*  Output Parameters
+*
+*  @param c:         Overwritten by the m-by-n updated matrix.
+*
+*/
+void symm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in N m, in N n,
+                in X alpha, in X* a, in N lda, in X* b, in N ldb, in X beta, X* c, in N ldc)
+{
+    N i, j, k;
+    N n1, n2;
+    N uplo_, side_;
+    X zero = X(0), one = X(1);
+    
+    if (alpha == zero && beta == one)
+        return;
+    
+    if (order == CblasRowMajor) {
+        n1 = m;
+        n2 = n;
+        uplo_ = uplo;
+        side_ = side;
+    } else {
+        n1 = n;
+        n2 = m;
+        uplo_ = (uplo == CblasUpper) ? CblasLower : CblasUpper;
+        side_ = (side == CblasLeft) ? CblasRight : CblasLeft;
+    }
+    
+    /* form  y := beta*y */
+    if (beta == zero) {
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                c[ldc * i + j] = zero;
+            }
+        }
+    } else if (beta != one) {
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                c[ldc * i + j] *= beta;
+            }
+        }
+    }
+    
+    if (alpha == zero)
+        return;
+    
+    if (side_ == CblasLeft && uplo_ == CblasUpper) {
+    
+        /* form  C := alpha*A*B + C */
+    
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                const X temp1 = alpha * b[ldb * i + j];
+                X temp2 = zero;
+                c[i * ldc + j] += temp1 * a[i * lda + i];
+                for (k = i + 1; k < n1; k++) {
+                    const X Aik = a[i * lda + k];
+                    c[k * ldc + j] += Aik * temp1;
+                    temp2 += Aik * b[ldb * k + j];
+                }
+                c[i * ldc + j] += alpha * temp2;
+            }
+        }
+    
+    } else if (side_ == CblasLeft && uplo_ == CblasLower) {
+    
+        /* form  C := alpha*A*B + C */
+        
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                const X temp1 = alpha * b[ldb * i + j];
+                X temp2 = zero;
+                for (k = 0; k < i; k++) {
+                    const X Aik = a[i * lda + k];
+                    c[k * ldc + j] += Aik * temp1;
+                    temp2 += Aik * b[ldb * k + j];
+                }
+                c[i * ldc + j] += temp1 * a[i * lda + i] + alpha * temp2;
+            }
+        }
+    
+    } else if (side_ == CblasRight && uplo_ == CblasUpper) {
+      
+        /* form  C := alpha*B*A + C */
+        
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                const X temp1 = alpha * b[ldb * i + j];
+                X temp2 = zero;
+                c[i * ldc + j] += temp1 * a[j * lda + j];
+                for (k = j + 1; k < n2; k++) {
+                    const X Ajk = a[j * lda + k];
+                    c[i * ldc + k] += temp1 * Ajk;
+                    temp2 += b[ldb * i + k] * Ajk;
+                }
+                c[i * ldc + j] += alpha * temp2;
+            }
+        }
+    
+    } else if (side_ == CblasRight && uplo_ == CblasLower) {
+      
+        /* form  C := alpha*B*A + C */
+        
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                const X temp1 = alpha * b[ldb * i + j];
+                X temp2 = zero;
+                for (k = 0; k < j; k++) {
+                    const X Ajk = a[j * lda + k];
+                    c[i * ldc + k] += temp1 * Ajk;
+                    temp2 += b[ldb * i + k] * Ajk;
+                }
+                c[i * ldc + j] += temp1 * a[j * lda + j] + alpha * temp2;
+            }
+        }
+    
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
+
 
 
