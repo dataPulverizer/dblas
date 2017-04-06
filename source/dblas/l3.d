@@ -1422,6 +1422,291 @@ void trmm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in
 }
 
 
+/** 
+*  @title trsm Solves a triangular matrix equation.
+*
+*  @description            The ?trsm routines solve one of the following matrix equations:
+*                          op(A)*X = alpha*B,
+*                          or
+*                          X*op(A) = alpha*B,
+*                          where
+*                          
+*                          alpha is a scalar,
+*                          X and B are m-by-n matrices,
+*                          A is a unit, or non-unit, upper or lower triangular matrix
+*                          op(A) is one of op(A) = A , or op(A) = A' , or op(A) = conjg(A').
+*                          The matrix B is overwritten by the solution matrix X.
+*
+*  Input Parameters:       
+*                          
+*  @param order:           Specifies whether two-dimensional array storage is row-major
+*                          (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param side:            Specifies whether op(A) appears on the left or right of X in the equation:
+*                          if side = CblasLeft , then op(A)*X = alpha*B ;
+*                          if side = CblasRight , then X*op(A) = alpha*B.
+*
+*  @param uplo:            Specifies whether the matrix A is upper or lower triangular:
+*                          uplo = CblasUpper
+*                          if uplo = CblasLower , then the matrix is low triangular.
+*
+*  @param transa:          Specifies the form of op(A) used in the matrix multiplication:
+*                          if transa = CblasNoTrans , then op(A) = A ;
+*                          if transa = CblasTrans ;
+*                          if transa = CblasConjTrans , then op(A) = conjg(A').
+*
+*  @param diag:            Specifies whether the matrix A is unit triangular:
+*                          if diag = CblasUnit then the matrix is unit triangular;
+*                          if diag = CblasNonUnit , then the matrix is not unit triangular.
+*
+*  @param m:               Specifies the number of rows of B. The value of m must be at least zero.
+*
+*  @param n:               Specifies the number of columns of B. The value of n must be at least zero.
+*
+*  @param alpha:           Specifies the scalar alpha.
+*                          When alpha is zero, then a is not referenced and b need not be set before
+*                          entry.
+*
+*  @param a:               Array, size lda* k , where k is m when side = CblasLeft and is n when
+*                          side = CblasRight . Before entry with uplo = CblasUpper , the leading k
+*                          by k upper triangular part of the array a must contain the upper triangular
+*                          matrix and the strictly lower triangular part of a is not referenced.
+*                          Before entry with uplo = CblasLower lower triangular part of the array a
+*                          must contain the lower triangular matrix and the strictly upper triangular
+*                          part of a is not referenced.
+*                          When diag = CblasUnit , the diagonal elements of a are not referenced
+*                          either, but are assumed to be unity.
+*
+*  @param lda:             Specifies the leading dimension of a as declared in the calling
+*                          (sub)program. When side = CblasLeft , then lda must be at least max(1,
+*                          m) , when side = CblasRight , then lda must be at least max(1, n) .
+*
+*  @param b:               For Layout = CblasColMajor : array, size ldb*n . Before entry, the leading
+*                          m-by-n part of the array b must contain the matrix B.
+*                          For Layout = CblasRowMajor : array, size ldb*m . Before entry, the leading
+*                          n-by-m part of the array b must contain the matrix B.
+*
+*  @param ldb:             Specifies the leading dimension of b as declared in the calling
+*                          (sub)program. When Layout = CblasColMajor , ldb must be at least
+*                          max(1, m) ; otherwise, ldb must be at least max(1, n).
+*
+*  Output Parameters:
+*
+*  @param b:               Overwritten by the solution matrix X.
+*
+*/
+void trsm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in CBLAS_TRANSPOSE transA,
+                in CBLAS_DIAG diag, in N m, in N n, in X alpha, in X* a, in N lda, X* b, in N ldb)
+{
+    N i, j, k;
+    N n1, n2;
+    
+    const N nonunit = (diag == CblasNonUnit);
+    N side_, uplo_, trans;
+    X zero = X(0), one = X(1);
+    
+    if (order == CblasRowMajor) {
+        n1 = m;
+        n2 = n;
+        side_ = side;
+        uplo_ = uplo;
+        trans = (transA == CblasConjTrans) ? CblasTrans : transA;
+    } else {
+        n1 = n;
+        n2 = m;
+        side_ = (side == CblasLeft) ? CblasRight : CblasLeft;
+        uplo_ = (uplo == CblasUpper) ? CblasLower : CblasUpper;
+        trans = (transA == CblasConjTrans) ? CblasTrans : transA;
+    }
+    if (side_ == CblasLeft && uplo_ == CblasUpper && trans == CblasNoTrans) {
+        /* form  B := alpha * inv(TriU(A)) *B */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = n1; i > 0 && i--;) {
+            if (nonunit) {
+                X Aii = a[lda * i + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] /= Aii;
+                }
+            }
+            for (k = 0; k < i; k++) {
+                const X Aki = a[k * lda + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * k + j] -= Aki * b[ldb * i + j];
+                }
+            }
+        }
+    } else if (side_ == CblasLeft && uplo_ == CblasUpper && trans == CblasTrans) {
+        /* form  B := alpha * inv(TriU(A))' *B */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = 0; i < n1; i++) {
+            if (nonunit) {
+                X Aii = a[lda * i + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] /= Aii;
+                }
+            }
+            
+            for (k = i + 1; k < n1; k++) {
+                const X Aik = a[i * lda + k];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * k + j] -= Aik * b[ldb * i + j];
+                }
+            }
+        }
+    } else if (side_ == CblasLeft && uplo_ == CblasLower && trans == CblasNoTrans) {
+        /* form  B := alpha * inv(TriL(A))*B */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = 0; i < n1; i++) {
+            if (nonunit) {
+                X Aii = a[lda * i + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] /= Aii;
+                }
+            }
+            for (k = i + 1; k < n1; k++) {
+                const X Aki = a[k * lda + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * k + j] -= Aki * b[ldb * i + j];
+                }
+            }
+        }
+    } else if (side_ == CblasLeft && uplo_ == CblasLower && trans == CblasTrans) {
+        /* form  B := alpha * TriL(A)' *B */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = n1; i > 0 && i--;) {
+            if (nonunit) {
+                X Aii = a[lda * i + i];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] /= Aii;
+                }
+            }
+            
+            for (k = 0; k < i; k++) {
+                const X Aik = a[i * lda + k];
+                for (j = 0; j < n2; j++) {
+                    b[ldb * k + j] -= Aik * b[ldb * i + j];
+                }
+            }
+        }
+    } else if (side_ == CblasRight && uplo_ == CblasUpper && trans == CblasNoTrans) {
+        /* form  B := alpha * B * inv(TriU(A)) */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                if (nonunit) {
+                    X Ajj = a[lda * j + j];
+                    b[ldb * i + j] /= Ajj;
+                }
+                
+                X Bij = b[ldb * i + j];
+                for (k = j + 1; k < n2; k++) {
+                    b[ldb * i + k] -= a[j * lda + k] * Bij;
+                }
+            }
+        }
+    } else if (side_ == CblasRight && uplo_ == CblasUpper && trans == CblasTrans) {
+        /* form  B := alpha * B * inv(TriU(A))' */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        
+        for (i = 0; i < n1; i++) {
+            for (j = n2; j > 0 && j--;) {
+                if (nonunit) {
+                    X Ajj = a[lda * j + j];
+                    b[ldb * i + j] /= Ajj;
+                }
+                X Bij = b[ldb * i + j];
+                for (k = 0; k < j; k++) {
+                    b[ldb * i + k] -= a[k * lda + j] * Bij;
+                }
+            }
+        }
+    } else if (side_ == CblasRight && uplo_ == CblasLower && trans == CblasNoTrans) {
+        /* form  B := alpha * B * inv(TriL(A)) */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = 0; i < n1; i++) {
+            for (j = n2; j > 0 && j--;) {
+                if (nonunit) {
+                    X Ajj = a[lda * j + j];
+                    b[ldb * i + j] /= Ajj;
+                }
+                
+                X Bij = b[ldb * i + j];
+                for (k = 0; k < j; k++) {
+                    b[ldb * i + k] -= a[j * lda + k] * Bij;
+                }
+            }
+        }
+    } else if (side_ == CblasRight && uplo_ == CblasLower && trans == CblasTrans) {
+        /* form  B := alpha * B * inv(TriL(A))' */
+        if (alpha != one) {
+            for (i = 0; i < n1; i++) {
+                for (j = 0; j < n2; j++) {
+                    b[ldb * i + j] *= alpha;
+                }
+            }
+        }
+        for (i = 0; i < n1; i++) {
+            for (j = 0; j < n2; j++) {
+                if (nonunit) {
+                    X Ajj = a[lda * j + j];
+                    b[ldb * i + j] /= Ajj;
+                }
+                
+                X Bij = b[ldb * i + j];
+                for (k = j + 1; k < n2; k++) {
+                    b[ldb * i + k] -= a[k * lda + j] * Bij;
+                }
+            }
+        }
+    } else {
+        assert(0, "unrecognized operation");
+    }
+}
+
+
+
 
 
 
