@@ -1706,6 +1706,187 @@ void trsm(N, X)(in CBLAS_ORDER order, in CBLAS_SIDE side, in CBLAS_UPLO uplo, in
 }
 
 
+/** 
+*  @title her2k Performs a Hermitian rank-2k update.
+*
+*  @description            The her2k routines perform a rank-2k matrix-matrix operation using general matrices A and B and a
+*                          Hermitian matrix C. The operation is defined as:
+*                          C := alpha*A*B H + conjg(alpha)*B*A H + beta*C,
+*                          or
+*                          C := alpha*A H *B + conjg(alpha)*B H *A + beta*C,
+*                          where
+*                          
+*                          alpha is a scalar and beta is a real scalar,
+*                          C is an n-by-n Hermitian matrix,
+*                          A and B are n-by-k matrices in the first case and k-by-n matrices in the second case.
+*
+*  Input Parameters:       
+*                          
+*  @param order:           Specifies whether two-dimensional array storage is row-major
+*                          (CblasRowMajor) or column-major (CblasColMajor).
+*
+*  @param uplo:            Specifies whether the upper or lower triangular part of the array c is used.
+*                          If uplo = CblasUpper, then the upper triangular of the array c is used.
+*                          If uplo = CblasLower, then the low triangular of the array c is used.
+*  @param trans:           Specifies the operation:
+*                          if trans = CblasNoTrans , then C:=alpha*A*B H + alpha*B*A H + beta*C ;
+*                          if trans = CblasConjTrans , then C:=alpha*A H *B + alpha*B H *A +
+*                          beta*C .
+*  @param n:               Specifies the order of the matrix C. The value of n must be at least zero.
+*  @param k:               With trans = CblasNoTrans specifies the number of columns of the matrix
+*                          A, and with trans = CblasConjTrans , k specifies the number of rows of the
+*                          matrix A.
+*                          The value of k must be at least equal to zero.
+*  @param alpha:           Specifies the scalar alpha.
+*  @param a:               ...
+*  @param lda:             Specifies the leading dimension of a as declared in the calling
+*                          (sub)program.
+*  @param beta:            Specifies the scalar beta.
+*  @param ldb:             Specifies the leading dimension of a as declared in the calling
+*                          (sub)program.
+*  @param c:               Array, size ldc by n.
+*                          Before entry with uplo = CblasUpper , the leading n-by-n upper triangular
+*                          part of the array c must contain the upper triangular part of the Hermitian
+*                          matrix and the strictly lower triangular part of c is not referenced.
+*                          Before entry with uplo = CblasLower , the leading n-by-n lower triangular
+*                          part of the array c must contain the lower triangular part of the Hermitian
+*                          matrix and the strictly upper triangular part of c is not referenced.
+*                          The imaginary parts of the diagonal elements need not be set, they are
+*                          assumed to be zero.
+*  @param ldc:             Specifies the leading dimension of c as declared in the calling
+*                          (sub)program. The value of ldc must be at least max(1, n).
+*
+*
+*  Output Parameters:
+*
+*
+*  @param c:               With uplo = CblasUpper , the upper triangular part of the array c is
+*                          overwritten by the upper triangular part of the updated matrix.
+*                          With uplo = CblasLower , the lower triangular part of the array c is
+*                          overwritten by the lower triangular part of the updated matrix.
+*                          The imaginary parts of the diagonal elements are set to zero.
+*
+*/
+void her2k(N, X)(in CBLAS_ORDER order, CBLAS_UPLO uplo, CBLAS_TRANSPOSE trans, in N n, in N k,
+                               X alpha, in X* a, in N lda, in X* b, in N ldb, in X beta, X* c, in N ldc)
+{
+    N i, j, l;
+    N uplow, transp;
+    X zero = X(0), one = X(1);
+
+    if(trans == CblasConjTrans)
+        trans = CblasTrans;
+
+    static if(isComplex!X)
+    {
+        X CONJ(X x)
+        {
+            return X(x.re, -x.im);
+        }
+    }else{
+        X CONJ(X x)
+        {
+            return x;
+        }
+    }
+
+    if (order == CblasColMajor) {
+        uplo = (uplo == CblasUpper) ? CblasLower : CblasUpper;
+        trans = (trans == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+        //alpha = X(alpha.re, -1*alpha.im);
+    }
+
+    if(beta == one && (alpha == zero || k == 0))
+        return;
+
+    import std.stdio : writeln;
+    // CblasRowMajor
+    if(uplo == CblasUpper && trans == CblasNoTrans)
+    {
+        for(i = 0; i < n; i++)
+        {
+            for(j = 0; j < n; j++)
+            {
+                if(i > j)
+                    continue;
+                X temp = zero;
+                for(l = 0; l < k; l++)
+                {
+                    temp += alpha*a[i*lda + l]*CONJ(b[j*ldb + l]) + CONJ(alpha)*b[i*ldb + l]*CONJ(a[j*lda + l]);
+                    //writeln("Matrix(Aij): ", a[i*lda + l], "\tMatrix(BljT): ", b[j*ldb + l], "  Matrix(Bil): ", b[i*ldb + l], "  Matrix(AjlT): ", a[j*lda + l]);
+                }
+                //writeln("i*ldc + j: ", i*ldc + j, ", Temp: ", temp, ", Cij: ", c[i*ldc + j]);
+                c[i*ldc + j] = temp + beta*c[i*ldc + j];
+            }
+        }
+    }
+
+    if(uplo == CblasLower && trans == CblasNoTrans)
+    {
+        for(i = 0; i < n; i++)
+        {
+            for(j = 0; j < n; j++)
+            {
+                /*if(i > j)
+                    continue;*/
+                X temp = zero;
+                for(l = 0; l < k; l++)
+                {
+                    temp += alpha*a[i*k + l]*CONJ(b[j*k + l]) + CONJ(alpha)*b[i*k + l]*CONJ(a[j*k + l]);
+                    //writeln("Matrix(Aij): ", a[i*k + l], "\tMatrix(BljT): ", CONJ(b[j*k + l]), "  Matrix(Bil): ", b[i*k + l], "  Matrix(AjlT): ", CONJ(a[j*k + l]));
+                }
+                //writeln("i*n + j: ", i*n + j, ", Temp: ", temp, ", Cij: ", c[i*n + j]);
+                c[i*n + j] = temp + beta*c[i*n + j];
+            }
+        }
+    }
+
+    if(uplo == CblasLower && trans == CblasTrans)
+    {
+        for(j = 0; j < n; j++)
+        {
+            for(i = 0; i < n; i++)
+            {
+                if(i < j)
+                    continue;
+                X temp = zero;
+                for(l = 0; l < k; l++)
+                {
+                    temp += alpha*CONJ(a[l*lda + j])*b[l*ldb + i] + CONJ(alpha)*CONJ(b[l*ldb + j])*a[l*lda + i];
+                    //writeln("Matrix(Aij): ", a[l*lda + j], "\tMatrix(BljT): ", b[l*ldb + i], "  Matrix(Bil): ", b[l*ldb + j], "  Matrix(AjlT): ", a[l*lda + i]);
+                }
+                //writeln("i*ldc + j: ", i*ldc + j, ", Temp: ", temp, ", Cij: ", c[i*ldc + j]);
+                c[i*ldc + j] = temp + beta*c[i*ldc + j];
+            }
+        }
+    }
+
+    if(uplo == CblasUpper && trans == CblasTrans)
+    {
+        for(j = 0; j < n; j++)
+        {
+            for(i = 0; i < n; i++)
+            {
+                if(i < j)
+                    continue;
+                X temp = zero;
+                for(l = 0; l < k; l++)
+                {
+                    temp += alpha*CONJ(a[l*n + j])*b[l*n + i] + CONJ(alpha)*CONJ(b[l*n + j])*a[l*n + i];
+                    //writeln(" Matrix(Aij): ", CONJ(a[l*n + j]), "\tMatrix(BljT): ", b[l*n + i], "  Matrix(Bil): ", CONJ(b[l*n + j]), "  Matrix(AjlT): ", a[l*n + i]);
+                }
+                //writeln("i*n + j: ", i*n + j, ", Temp: ", temp, ", Cij: ", c[i*n + j]);
+                c[i + j*n] = temp + beta*c[i + j*n];
+            }
+        }
+    }
+}
+
+
+
+
+
+
 
 
 
