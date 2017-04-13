@@ -1,8 +1,15 @@
 # BLAS implementation for D
 
-This BLAS implementation for D is based on the [GNU Scientific Library](https://www.gnu.org/software/gsl/manual/) BLAS module. The library is currently in the first phase - code conversion for GSL. Documentation of the function is largely taken from the [MKL manual](https://software.intel.com/en-us/articles/mkl-reference-manual). Once the code conversion is completed efforts will be made to  optimise performance.
+This BLAS implementation for D is based on the [GNU Scientific Library](https://www.gnu.org/software/gsl/manual/) BLAS module. This is the first version release of the library and much of the code was created by code conversion of GSL. At present only the template functions are available
+and not the type specific aliases - however all the relevant functionality can be obtained from the template functions.
 
-The approach taken in writing the code is to use D's metaprogramming features as much as possible to reduce code complexity.
+[MKL BLAS](https://software.intel.com/en-us/articles/mkl-reference-manual) documentation is being used as a placeholder with a view to overwrite it later.
+
+## Next Phase
+
+1. Performance optimization
+2. Complete unit test coverage
+3. Type specific BLAS aliases
 
 ```
 #!/usr/bin/env dub
