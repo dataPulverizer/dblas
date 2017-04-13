@@ -1,7 +1,7 @@
 {
 	"name": "dblas",
 	"description": "BLAS implementation for D",
-	"targetType": "executable",
+	"targetType": "library",
 	"homepage": "http://www.active-analytics.com",
 	"copyright": "Copyright © 2016, Chibisi Chima-Okereke",
 	"libs": ["openblas", "pthread", "m"],

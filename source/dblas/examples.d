@@ -6,7 +6,7 @@
 *
 */
 
-module test;
+module examples;
 public import dblas.l1;
 public import dblas.l2;
 public import dblas.l3;

@@ -13,22 +13,7 @@ and not the type specific aliases - however all the relevant functionality can b
 
 ## Example
 
-Executing a single file
-
 ```
-#!/usr/bin/env dub
-/+ dub.json:
-{
-    "name": "testdblas",
-    "dependencies": {"dblas": "~>0.0.1"},
-}
-+/
-
-/*
-*  Compile example:
-*  dub run --single testdblas.d
-*/
-
 import std.stdio : writeln;
 import dblas;
 import std.math: complex;

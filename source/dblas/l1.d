@@ -6,15 +6,11 @@
 *  
 */
 
-// dmd dblas.d -unittest -L-lopenblas -L-lpthread && ./dblas
-
 module dblas.l1;
 import std.complex: Complex, complex, conj;
 import std.math: abs, fabs, sqrt, sgn, pow, approxEqual;
 import std.traits : isIntegral, isUnsigned, isFloatingPoint;
-// import std.stdio : writeln;
 import std.random : Random, uniform, unpredictableSeed;
-
 
 /* CBLAS functions functions for testing */
 extern (C){
@@ -95,12 +91,6 @@ T min(T)(T a, T b){
 T max(T)(T a, T b){
 	return a < b ? a : b;
 }
-
-
-/** TODO:
-*   1. Unit tests and better examples. extern(C) equivalent functions from the blas library 
-*      and make sure that the outputs are the same :-)
-*/
 
 
 /**
@@ -407,20 +397,8 @@ X nrm2(N, X)(N n, X* x, N incx)
 
   return scale * sqrt(ssq);
 }
-// Complex version
-/*V nrm2(N, X: Complex!V, V = typeof(X.re))(N n, X* x, N incx)
-if(isIntegral!N)
-{
-	//V res = ((*x) * conj(*x)).re;
-	V res = abs2(*x);
-	x += incx; n--;
-	while(n){
-		//res += ((*x) * conj(*x)).re;
-		res += abs2(*x);
-		x += incx; n--;
-	}
-	return sqrt(res);
-}*/
+
+
 /* Converted from GSL implementation */
 V nrm2(N, X: Complex!V, V = typeof(X.re))(N n, X* x, N incx)
 {
